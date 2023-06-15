@@ -1,0 +1,12 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Robot
+Bundle-SymbolicName: fr.lip6.move.robots;singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Require-Bundle: org.eclipse.core.runtime,
+ fr.lip6.move.gal.gal2smt,
+ lip6.smtlib.SMT,
+ fr.lip6.move.gal.process,
+ fr.lip6.move.gal.ltsmin.binaries
+Bundle-RequiredExecutionEnvironment: JavaSE-11
+Bundle-Vendor: UPMC/CNRS, LIP6
