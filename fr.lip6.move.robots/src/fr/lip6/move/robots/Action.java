@@ -15,5 +15,7 @@ public enum Action {
 	LEFT,
 	RIGHT,
 	// ready to observe
-	LOOK
+	LOOK,
+	// for POR in state encoding
+	TOTAL
 }
