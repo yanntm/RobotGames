@@ -572,7 +572,7 @@ public class Robots2PinsTransformer {
 		if (!hasPartialOrder) {
 			return;
 		}
-		try {
+/*		try {
 			nes.init(net);
 
 			IntMatrixCol mayEnable = nes.computeAblingMatrix(false);
@@ -657,7 +657,7 @@ public class Robots2PinsTransformer {
 			//			pw.println(" return lm[g];");
 			//			pw.println("}");
 		}
-
+*/
 	}
 
 	private int labelCount() {
@@ -719,13 +719,62 @@ public class Robots2PinsTransformer {
 		}
 		pw.print("}");
 	}
+	
+	private void printObservationResolver(PrintWriter pw) {
+		pw.println("int is_reversed_maximal(char *observation) {");
+		pw.println("  int i, j;");
+		pw.println("  for (i = 1, j = "+nbPos+" - 1; i < j; i++, j--) {");
+		pw.println("  if (observation[i] > observation[j]) {");
+		pw.println("  return true;");
+		pw.println("  } else if (observation[i] < observation[j]) {");
+		pw.println("  return false;");
+		pw.println("  }}");
+		pw.println("  return true; // the observation is symmetric");
+		pw.println("}");
+		
+		pw.println("void get_observation_array(int *state, int pos, char *observation) {");
+		pw.println("int i, j;");
+
+		pw.println("// Calculate the number of robots at each position and rotate");
+		pw.println("for (i = 0; i < "+nbPos+"; i++) {");
+		pw.println("observation[i] = (char)(state[pos*6+5] & 0xFF) + 1;  // Convert sum to char and increment by 1");
+		pw.println("}");
+
+		pw.println("// If it's not reversed maximal, reflect it");
+		pw.println("if (!is_reversed_maximal(observation)) {");
+		pw.println("for (i = 1, j = "+nbPos+" - 1; i < j; i++, j--) {");
+		pw.println("char temp = observation[i];");
+		pw.println("observation[i] = observation[j];");
+		pw.println("observation[j] = temp;");
+		pw.println("}");
+		pw.println("}");
+
+		// Null-terminate the string");
+		pw.println("observation["+nbPos+"] = '\\0';");
+		pw.println("}");
+
+		// perfect hash
+		pw.println("#include \"observations.h\"");
+		
+		pw.println("int get_observation(int *state, int pos) {");
+		pw.println(" char observation["+(nbPos+1)+"];\n"
+				+ "get_observation_array(state, pos, observation);\n");
+		pw.println(" return in_word_set(observation, "+nbPos+")->index ; \n } \n");
+		
+		
+		// perfect hash
+		pw.println("extern int strat(int);");
+
+	}
+
 
 	private void printNextState(PrintWriter pw) {
 
 		pw.append("typedef struct state {\n");
-		pw.append("  int state [" + (5*nbPos) + "];\n");
+		pw.append("  int state [" + (6*nbPos) + "];\n");
 		pw.append("} state_t ;\n");
-
+		
+		printObservationResolver(pw);
 
 		if (!forSpot) {
 			pw.println("int next_state(void* model, int group, int *src, TransitionCB callback, void *arg) {");
@@ -743,24 +792,84 @@ public class Robots2PinsTransformer {
 			pw.println("  switch (group) {");
 			for (int tindex = 0; tindex < (5*nbPos); tindex++) {
 				pw.println("  case " + tindex + " : ");
+				int pos = tindex / 5;
+				Action a = Action.values()[tindex%5];
+				if (a == Action.LOOK) {
+					pw.append("  if (cur.state ["+ (pos*6+ Action.LOOK.ordinal())+"] > 0) { ");
+					
+					pw.println("  int obs = get_observation(cur.state,group/5);");
+					pw.println("  int act = strat(obs);");
+					pw.println("   cur.state[" + (pos*6+ Action.LOOK.ordinal()) + "] --;");
+					pw.println("   cur.state[" + (pos*6) +"+ act] ++;");
+					pw.println("       nbsucc++; ");
+					pw.println("       callback(arg, &transition_info, cur.state, wm[group]);");
+					pw.println("     }");
+					pw.println("     break;");
+				} else if (a == Action.LEFT) {
+					pw.append("  if (cur.state ["+ (pos*6+ Action.LEFT.ordinal())+"] > 0) { ");
+					int left = (pos + nbPos-1) %  nbPos ;
+					// we read and update LOOK and TOTAL of pos-1%N
+					pw.println("   cur.state[ " + (left*6 + Action.LOOK.ordinal()) + "] ++;");
+					pw.println("   cur.state[ " + (left*6 + Action.TOTAL.ordinal()) + "] ++;");
+					// we read and update LEFT and TOTAL of pos
+					pw.println("   cur.state[ " + (pos*6 + Action.LEFT.ordinal()) + "] --;");
+					pw.println("   cur.state[ " + (pos*6 + Action.TOTAL.ordinal()) + "] --;");
+					pw.println("       nbsucc++; ");
+					pw.println("       callback(arg, &transition_info, cur.state, wm[group]);");
+					pw.println("     }");
+					pw.println("     break;");
+					} else if (a == Action.RIGHT) {
+						pw.append("  if (cur.state ["+ (pos*6+ Action.RIGHT.ordinal())+"] > 0) { ");
+						int right = (pos + 1) % nbPos;
+						// we read and update LOOK and TOTAL of pos+1%N
+						pw.println("   cur.state[ " + (right*6 + Action.LOOK.ordinal()) + "] ++;");
+						pw.println("   cur.state[ " + (right*6 + Action.TOTAL.ordinal()) + "] ++;");
+						// we read and update RIGHT and TOTAL of pos
+						pw.println("   cur.state[ " + (pos*6 + Action.RIGHT.ordinal()) + "] --;");
+						pw.println("   cur.state[ " + (pos*6 + Action.TOTAL.ordinal()) + "] --;");
+						pw.println("       nbsucc++; ");
+						pw.println("       callback(arg, &transition_info, cur.state, wm[group]);");
+						pw.println("     }");
+						pw.println("     break;");
+					} else if (a == Action.STAY) {
+						pw.append("  if (cur.state ["+ (pos*6+ Action.STAY.ordinal())+"] > 0) { ");
+						// we read and update LOOK and STAY of pos
+						pw.println("   cur.state[ " + (pos*6 + Action.STAY.ordinal()) + "] --;");
+						pw.println("   cur.state[ " + (pos*6 + Action.LOOK.ordinal()) + "] ++;");
+						pw.println("       nbsucc++; ");
+						pw.println("       callback(arg, &transition_info, cur.state, wm[group]);");
+						pw.println("     }");
+						pw.println("     break;");
+						
+					} else if (a == Action.MOVE) {
+						// we read and update MOVE and TOTAL of pos
+						pw.append("  if (cur.state ["+ (pos*6+ Action.MOVE.ordinal())+"] > 0) { ");
+						int left = (pos + nbPos-1) %  nbPos ;
+						pw.println("   cur.state[ " + (pos*6 + Action.RIGHT.ordinal()) + "] --;");
+						pw.println("   cur.state[ " + (pos*6 + Action.TOTAL.ordinal()) + "] --;");
+						// we read and update LOOK and TOTAL of pos-1%N
+						pw.println("   cur.state[ " + (left*6 + Action.LOOK.ordinal()) + "] ++;");
+						pw.println("   cur.state[ " + (left*6 + Action.TOTAL.ordinal()) + "] ++;");
+						
+						pw.println("       nbsucc++; ");
+						pw.println("       callback(arg, &transition_info, cur.state, wm[group]);");
+
+						// undo
+						pw.println("   cur.state[ " + (left*6 + Action.LOOK.ordinal()) + "] --;");
+						pw.println("   cur.state[ " + (left*6 + Action.TOTAL.ordinal()) + "] --;");
+												
+						int right = (pos + 1) % nbPos;
+						
+						// we read and update LOOK and TOTAL of pos+1%N
+						pw.println("   cur.state[ " + (right*6 + Action.LOOK.ordinal()) + "] ++;");
+						pw.println("   cur.state[ " + (right*6 + Action.TOTAL.ordinal()) + "] ++;");
+
+						pw.println("       nbsucc++; ");
+						pw.println("       callback(arg, &transition_info, cur.state, wm[group]);");
+						pw.println("     }");
+						pw.println("     break;");
+					}
 				
-				SparseIntArray pt = net.getFlowPT().getColumn(tindex);
-				SparseIntArray tp = net.getFlowTP().getColumn(tindex);
-				if (pt.size() > 0) {
-					pw.append("  if (" + buildGuard(pt, "cur.state") + ") { ");
-				} else {
-					pw.append("  if (true) { ");
-				}
-				SparseIntArray eff = SparseIntArray.sumProd(-1, pt, 1, tp);
-				for (int i = 0, ie = eff.size(); i < ie; i++) {
-					pw.append("   cur.state[" + eff.keyAt(i) + "] += " + eff.valueAt(i) + ";");
-				}
-				pw.println("       nbsucc++; ");
-				pw.println("       callback(arg, &transition_info, cur.state, wm[group]);");
-				// pw.println(" memcpy(& cur->state, src, sizeof(int)*
-				// "+(5*nbPos)+");");
-				pw.println("     }");
-				pw.println("     break;");
 			}
 			pw.println("  default : return 0 ;");
 			pw.println("  } // end switch(group) ");
@@ -776,18 +885,18 @@ public class Robots2PinsTransformer {
 			
 
 			pw.println("  switch (label) {");
-			// guards 
-			for (int tindex = 0, tie = (5*nbPos); tindex < tie; tindex++) {
-				pw.println("  case " + tindex + " : ");
-				pw.println("     return " + buildGuard(net.getFlowPT().getColumn(tindex), "src") + ";");
-			}
-			// labels
-			for (int tindex = (5*nbPos); tindex < (5*nbPos) + alist.size(); tindex++) {
-				pw.println("      case " + tindex + " : ");
-				pw.append("        return ");
-				alist.get(tindex - (5*nbPos)).getExpression().accept(printer);
-				pw.println(";");
-			}
+//			// guards 
+//			for (int tindex = 0, tie = (5*nbPos); tindex < tie; tindex++) {
+//				pw.println("  case " + tindex + " : ");
+//				pw.println("     return " + buildGuard(net.getFlowPT().getColumn(tindex), "src") + ";");
+//			}
+//			// labels
+//			for (int tindex = (5*nbPos); tindex < (5*nbPos) + alist.size(); tindex++) {
+//				pw.println("      case " + tindex + " : ");
+//				pw.append("        return ");
+//				alist.get(tindex - (5*nbPos)).getExpression().accept(printer);
+//				pw.println(";");
+//			}
 			pw.println("  default : return 0 ;");
 			pw.println("  } // end switch(group) ");
 
@@ -795,15 +904,15 @@ public class Robots2PinsTransformer {
 
 			pw.println("int state_label_many(void* model, int * src, int * label, int guards_only) {");
 			pw.println("  (void)model;");
-			for (int tindex = 0; tindex < (5*nbPos); tindex++) {
-				pw.println("  label[" + tindex + "] = " + buildGuard(net.getFlowPT().getColumn(tindex), "src") + ";");
-			}
-			pw.println("  if (guards_only) return 0; ");
-			for (int tindex = (5*nbPos); tindex < (5*nbPos) + alist.size(); tindex++) {
-				pw.println("  label[" + tindex + "] = ");
-				alist.get(tindex - (5*nbPos)).getExpression().accept(printer);
-				pw.println(" ;");
-			}
+//			for (int tindex = 0; tindex < (5*nbPos); tindex++) {
+//				pw.println("  label[" + tindex + "] = " + buildGuard(net.getFlowPT().getColumn(tindex), "src") + ";");
+//			}
+//			pw.println("  if (guards_only) return 0; ");
+//			for (int tindex = (5*nbPos); tindex < (5*nbPos) + alist.size(); tindex++) {
+//				pw.println("  label[" + tindex + "] = ");
+//				alist.get(tindex - (5*nbPos)).getExpression().accept(printer);
+//				pw.println(" ;");
+//			}
 			pw.println("  return 0; // return number of successors");
 			pw.println("}");
 
@@ -853,6 +962,7 @@ public class Robots2PinsTransformer {
 		}
 	}
 
+
 	public String buildGuard(SparseIntArray pt, String prefix) {
 		if (pt.size() == 0) {
 			return "true";
@@ -882,7 +992,9 @@ public class Robots2PinsTransformer {
 	private boolean forSpot;
 	private List<AtomicProp> invAtoms = new ArrayList<>();
 	
-	public void transform(SparsePetriNet spn, String cwd, boolean withPorMatrix, boolean forSpot, List<AtomicProp> listAtoms) {
+	public void transform(String cwd, boolean withPorMatrix, boolean forSpot, int nbPos, int nbRobots, List<AtomicProp> listAtoms) {
+		this.nbPos = nbPos;
+		this.nbRobots = nbRobots;
 		this.forSpot = forSpot;
 		//		if ( spec.getMain() instanceof GALTypeDeclaration ) {
 		//			Logger.getLogger("fr.lip6.move.gal").fine("detecting pure GAL");
@@ -892,45 +1004,13 @@ public class Robots2PinsTransformer {
 		//		}
 		long time = System.currentTimeMillis();
 
-		net = spn;
-
-		if (spn.getTransitionCount() > 1500 && withPorMatrix) {
-			withPorMatrix = false;
-			Logger.getLogger("fr.lip6.move.gal").info("Too many transitions (" + (5*nbPos)
-			+ ") to apply POR reductions. Disabling POR matrices.");
-		}
 		
 		if (listAtoms != null) {
 			this.listAtoms = listAtoms;
-		} else {
-			boolean isLTL = true;
-			if (! spn.getProperties().isEmpty() && spn.getProperties().get(0).getType() == PropertyType.INVARIANT) {
-				isLTL = false;
-			}
-
-			if (isLTL) {
-				atoms.loadAtomicProps(spn.getProperties());
-				this.listAtoms = new ArrayList<>(atoms.getAtoms());
-			} else {
-				for (Property prop : spn.getProperties()) {
-					if (prop.getType() == PropertyType.INVARIANT) {
-						if (prop.getBody().getOp() == Op.AG) {
-							invAtoms.add(new AtomicProp(prop.getName().replaceAll("-", ""), 
-									prop.getBody().childAt(0)));
-						} else if (prop.getBody().getOp() == Op.EF) {
-							// negate
-							invAtoms.add(new AtomicProp(prop.getName().replaceAll("-", ""),
-									Expression.not(prop.getBody().childAt(0))));
-						}					
-					}
-				}
-			}
-		}
-
+		} 
+		
 		hasPartialOrder = withPorMatrix;
-		nes = new NecessaryEnablingsolver(spn.isSafe());
 		try {
-
 			buildBodyFile(cwd + "/model.c");
 			if (!forSpot)
 				buildHeader(cwd + "/model.h");
