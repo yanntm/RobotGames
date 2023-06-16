@@ -13,5 +13,7 @@ public enum Action {
 	STAY,
 	// when view is asymmetric
 	LEFT,
-	RIGHT
+	RIGHT,
+	// ready to observe
+	LOOK
 }
