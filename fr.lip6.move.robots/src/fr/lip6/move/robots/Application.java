@@ -43,6 +43,25 @@ public class Application implements IApplication {
 			
 			GperfRunner.runGperf(observations, workFolder.getCanonicalPath());
 			
+			Robots2PinsTransformer r2t = new Robots2PinsTransformer();
+			r2t.transform(workFolder.getCanonicalPath(), false, false, nbPos, nbRobot, null);
+
+			// setup SMT solver
+			SMTSolver solver = new SMTSolver();		
+			solver.declareVariables(observations);
+			
+			int[] strategy = solver.readStrategy();
+
+			
+			LTSminRunner runner = new LTSminRunner(observations, false, 100, workFolder);
+			runner.solve(strategy);
+
+			
+			printStrategy(observations,strategy);		
+			
+			
+			solver.quit();
+
 		} catch (IOException e) {
 			System.out.println("Unable to create temporary folder.");
 			e.printStackTrace();
@@ -50,21 +69,7 @@ public class Application implements IApplication {
 
 		
 		
-		// setup SMT solver
-		SMTSolver solver = new SMTSolver();		
-		solver.declareVariables(observations);
 		
-		// setup LTSMin
-		LTSminRunner ltsmin = new LTSminRunner(observations, false, timeout);
-		
-		
-		
-		int[] strategy = solver.readStrategy();
-		
-		printStrategy(observations,strategy);		
-		
-		
-		solver.quit();
 		return IApplication.EXIT_OK;
 	}
 	
