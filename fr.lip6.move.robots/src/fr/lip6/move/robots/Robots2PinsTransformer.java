@@ -28,7 +28,7 @@ public class Robots2PinsTransformer {
 	private static final int DEBUG = 2;
 	private int nbRobots;
 	private int nbPos;
-
+	
 	
 	private void buildBodyFile(String path) throws IOException {
 		File fpath = new File(path);
@@ -44,12 +44,12 @@ public class Robots2PinsTransformer {
 			pw.println("#define true 1");
 			pw.println("#define false 0");
 
-			pw.println("int initial [" + 5*nbPos + "] ;");
+			pw.println("int initial [" + 6*nbPos + "] ;");
 
 			pw.println("int* get_initial_state() {");
-			for (int i = 0, ie = 5*nbPos; i < ie; i++) {
-				pw.println("  // " + (i/5) + ":" + Action.values()[i%5] );
-				if (i==4) {
+			for (int i = 0, ie = 6*nbPos; i < ie; i++) {
+				pw.println("  // " + (i/6) + ":" + Action.values()[i%6] );
+				if (i==4 || i==5) {
 					pw.println("  initial [" + (i) + "] = " + nbRobots + ";");
 				} else {
 					pw.println("  initial [" + (i) + "] = " + 0 + ";");					
@@ -67,7 +67,7 @@ public class Robots2PinsTransformer {
 		}
 
 		pw.println("int get_state_variable_count() {");
-		pw.println("  return " + 5*nbRobots + " ;");
+		pw.println("  return " + 6*nbPos + " ;");
 		pw.println("}");
 
 
