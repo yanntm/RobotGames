@@ -20,15 +20,10 @@ public class LTSminRunner {
 	private List<int[]>[] obs;
 	private int[] strategy;
 
-	public LTSminRunner(List<int[]>[] observations, boolean doPOR, long timeout) {
+	public LTSminRunner(List<int[]>[] observations, boolean doPOR, long timeout, File work) {
 		this.obs = observations;
 		this.doPOR = doPOR;
-		try {
-			this.workFolder = Files.createTempDirectory("ltsmin").toFile();
-			if (DEBUG < 2) workFolder.deleteOnExit();
-		} catch (IOException e) {
-			System.out.println("Unable to create temporary folder.");
-		}
+		this.workFolder = work;
 		this.timeout = timeout;
 	}
 
