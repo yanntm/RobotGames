@@ -1,5 +1,8 @@
 package fr.lip6.move.robots;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
 
@@ -11,6 +14,7 @@ public class Application implements IApplication {
 	private static final String APPARGS = "application.args";
 	private static final String NB_ROBOT = "-K";
 	private static final String NB_POS = "-N";
+	private static final int DEBUG=0;
 	
 	public Object start(IApplicationContext context) throws Exception {
 		
@@ -28,9 +32,24 @@ public class Application implements IApplication {
 				nbPos = Integer.parseInt(args[++i]);
 			} 
 		}
-		
+		System.out.println("Running strategy search for K="+nbRobot +" on a ring of N="+nbPos +" positions.");
 		List<int[]>[] observations = ObservationGenerator.generateSplitObservations(nbPos, nbRobot);
+
+		// use gperf to index our observations
+		
+		try {
+			File workFolder = Files.createTempDirectory("gperf").toFile();
+			if (DEBUG < 2) workFolder.deleteOnExit();
 			
+			GperfRunner.runGperf(observations, workFolder.getCanonicalPath());
+			
+		} catch (IOException e) {
+			System.out.println("Unable to create temporary folder.");
+			e.printStackTrace();
+		}
+
+		
+		
 		// setup SMT solver
 		SMTSolver solver = new SMTSolver();		
 		solver.declareVariables(observations);
