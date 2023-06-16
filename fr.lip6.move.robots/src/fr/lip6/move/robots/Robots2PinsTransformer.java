@@ -28,6 +28,7 @@ public class Robots2PinsTransformer {
 	private static final int DEBUG = 2;
 	private int nbRobots;
 	private int nbPos;
+	private boolean hasPartialOrder=true;
 	
 	
 	private void buildBodyFile(String path) throws IOException {
@@ -76,9 +77,9 @@ public class Robots2PinsTransformer {
 		if (forSpot) {
 			pw.print("void get_initial_state(void* ss)\n");
 			pw.print("{\n  int* initial = (int*)ss;\n");
-			for (int i = 0, ie = 5*nbPos; i < ie; i++) {
-				pw.println("  // " + (i/5) + ":" + Action.values()[i%5] );
-				if (i==4) {
+			for (int i = 0, ie = 6*nbPos; i < ie; i++) {
+				pw.println("  // " + (i/6) + ":" + Action.values()[i%6] );
+				if (i==4 || i==5) {
 					pw.println("  initial [" + (i) + "] = " + nbRobots + ";");
 				} else {
 					pw.println("  initial [" + (i) + "] = " + 0 + ";");					
@@ -87,10 +88,10 @@ public class Robots2PinsTransformer {
 			pw.println("  return initial;");
 			pw.println("}");
 			
-			pw.print("const char* varnames[" + 5*nbPos + "] = { ");
+			pw.print("const char* varnames[" + 6*nbPos + "] = { ");
 			
-			for (int i=0, ie = 5*nbPos ; i < ie ; i++) {
-				String vname = "pos" + (i/5) + "_" + Action.values()[i%5].toString();
+			for (int i=0, ie = 6*nbPos ; i < ie ; i++) {
+				String vname = "pos" + (i/6) + "_" + Action.values()[i%6].toString();
 				pw.print("\""+vname+"\"");
 				if (i < ie -1) {
 					pw.print(", ");
@@ -124,10 +125,10 @@ public class Robots2PinsTransformer {
 			pw.println("int get_successors(void* model, int* in, TransitionCBSPOT cb, void* ctx)\n{");
 			pw.println("  int res=0;");
 			pw.println("  state_t cur;");
-			pw.println("  memcpy(&cur, in, "+ (5*nbPos)+" * sizeof(int));");
+			pw.println("  memcpy(&cur, in, "+ (6*nbPos)+" * sizeof(int));");
 			for (int tid=0,tide=(5*nbPos); tid<tide; ++tid) {
 				pw.println("  if (transition"+tid+"(&cur)) {\n    cb (ctx, NULL, cur.state);");
-				pw.println("    memcpy(&cur, in, "+ (5*nbPos)+" * sizeof(int));");
+				pw.println("    memcpy(&cur, in, "+ (6*nbPos)+" * sizeof(int));");
 				pw.println("    ++res;");
 				pw.println("  }");
 			}
@@ -220,33 +221,7 @@ public class Robots2PinsTransformer {
 		}
 		return b;
 	}
-
-	private void printDependencyMatrix(PrintWriter pw) {
-
-		List<int[]> rm = new ArrayList<>();
-		List<int[]> wm = new ArrayList<>();
-		for (int tindex = 0, te = (5*nbPos); tindex < te; tindex++) {
-			SparseIntArray sum = SparseIntArray.sumProd(1, net.getFlowPT().getColumn(tindex), 1,
-					net.getFlowTP().getColumn(tindex));
-			int[] r = convertToLine(sum);
-			rm.add(r);
-
-			SparseIntArray effect = SparseIntArray.sumProd(-1, net.getFlowPT().getColumn(tindex), 1,
-					net.getFlowTP().getColumn(tindex));
-			int[] w = convertToLine(effect);
-			wm.add(w);
-		}
-
-		printMatrix(pw, "rm", rm);
-		pw.print("int* read_matrix(int row) {\n" + "  return rm[row];\n" + "}\n");
-
-		printMatrix(pw, "wm", wm);
-
-		pw.print("int* write_matrix(int row) {\n" + "  return wm[row];\n" + "}\n");
-
-		printLabels(pw, rm, wm);
-	}
-
+	
 	private int[] convertToLine(SparseIntArray bs) {
 		int card = bs.size();
 		int[] line = new int[card + 1];
@@ -258,6 +233,95 @@ public class Robots2PinsTransformer {
 		}
 		return line;
 	}
+
+
+	private void printDependencyMatrix(PrintWriter pw) {
+
+		List<int[]> rm = new ArrayList<>();
+		List<int[]> wm = new ArrayList<>();
+		for (int tindex = 0, te = (5*nbPos); tindex < te; tindex++) {
+			int pos = tindex / 5;
+			Action a = Action.values()[tindex%5];
+			SparseIntArray reads = new SparseIntArray();
+			SparseIntArray writes = new SparseIntArray();
+			if (a == Action.LOOK) {
+				// we read all "total" cells
+				for (int i=0,ie=nbPos; i<ie; i++) {
+					reads.put(i*Action.TOTAL.ordinal(), 1);
+				}
+				// we read and write at our position (all cells except TOTAL)
+				for (int i=0,ie=5; i<ie; i++) {
+					reads.put(i+ pos*6, 1);
+					writes.put(i+ pos*6, 1);
+				}
+			} else if (a == Action.LEFT) {
+				int left = (pos + nbPos -1) % nbPos;
+				// we read and update LOOK and TOTAL of pos-1%N
+				reads.put(left*6 + Action.LOOK.ordinal(), 1);
+				reads.put(left*6 + Action.TOTAL.ordinal(), 1);
+				writes.put(left*6 + Action.LOOK.ordinal(), 1);
+				writes.put(left*6 + Action.TOTAL.ordinal(), 1);
+				// we read and update LEFT and TOTAL of pos
+				reads.put(pos*6 + Action.LEFT.ordinal(), 1);
+				reads.put(pos*6 + Action.TOTAL.ordinal(), 1);				
+				writes.put(pos*6 + Action.LEFT.ordinal(), 1);
+				writes.put(pos*6 + Action.TOTAL.ordinal(), 1);				
+			} else if (a == Action.RIGHT) {
+				int right = (pos + 1) % nbPos;
+				// we read and update LOOK and TOTAL of pos-1%N
+				reads.put(right*6 + Action.LOOK.ordinal(), 1);
+				reads.put(right*6 + Action.TOTAL.ordinal(), 1);
+				writes.put(right*6 + Action.LOOK.ordinal(), 1);
+				writes.put(right*6 + Action.TOTAL.ordinal(), 1);
+				// we read and update RIGHT and TOTAL of pos
+				reads.put(pos*6 + Action.RIGHT.ordinal(), 1);
+				reads.put(pos*6 + Action.TOTAL.ordinal(), 1);				
+				writes.put(pos*6 + Action.RIGHT.ordinal(), 1);
+				writes.put(pos*6 + Action.TOTAL.ordinal(), 1);				
+			} else if (a == Action.STAY) {
+				// we read and update LOOK and STAY of pos
+				reads.put(pos*6 + Action.LOOK.ordinal(), 1);
+				reads.put(pos*6 + Action.STAY.ordinal(), 1);				
+				writes.put(pos*6 + Action.LOOK.ordinal(), 1);
+				writes.put(pos*6 + Action.STAY.ordinal(), 1);				
+			} else if (a == Action.MOVE) {
+				// we read and update MOVE and TOTAL of pos
+				reads.put(pos*6 + Action.MOVE.ordinal(), 1);
+				reads.put(pos*6 + Action.TOTAL.ordinal(), 1);				
+				writes.put(pos*6 + Action.MOVE.ordinal(), 1);
+				writes.put(pos*6 + Action.TOTAL.ordinal(), 1);				
+
+				int left = (pos + nbPos -1) % nbPos;
+				// we read and update LOOK and TOTAL of pos-1%N
+				reads.put(left*6 + Action.LOOK.ordinal(), 1);
+				reads.put(left*6 + Action.TOTAL.ordinal(), 1);
+				writes.put(left*6 + Action.LOOK.ordinal(), 1);
+				writes.put(left*6 + Action.TOTAL.ordinal(), 1);
+								
+				int right = (pos + 1) % nbPos;
+				// OR we read and update LOOK and TOTAL of pos+1%N
+				reads.put(right*6 + Action.LOOK.ordinal(), 1);
+				reads.put(right*6 + Action.TOTAL.ordinal(), 1);
+				writes.put(right*6 + Action.LOOK.ordinal(), 1);
+				writes.put(right*6 + Action.TOTAL.ordinal(), 1);
+			}
+			
+			int[] r = convertToLine(reads);
+			rm.add(r);
+
+			int[] w = convertToLine(writes);
+			wm.add(w);
+		}
+
+		printMatrix(pw, "rm", rm);
+		pw.print("int* read_matrix(int row) {\n" + "  return rm[row];\n" + "}\n");
+
+		printMatrix(pw, "wm", wm);
+		pw.print("int* write_matrix(int row) {\n" + "  return wm[row];\n" + "}\n");
+		
+		printLabels(pw, rm, wm);
+	}
+
 
 	private void printGB(PrintWriter pw) {
 		// set the name of this PINS plugin
@@ -276,11 +340,10 @@ public class Robots2PinsTransformer {
 		pw.println("  lts_type_set_format (ltstype, int_type, LTStypeDirect);");
 
 		pw.println("  // set state name & type");
-		int i = 0;
-		for (String vname : net.getPnames()) {
+		for (int i=0, ie=nbPos*6; i<ie; i++) {
+			String vname = "pos" + (i/6) + "_" + Action.values()[i%6].toString();
 			pw.println("  lts_type_set_state_name(ltstype," + i + ",\"" + vname + "\");");
 			pw.println("  lts_type_set_state_typeno(ltstype," + i + ",int_type);");
-			i++;
 		}
 
 		// edge label types : TODO
@@ -327,7 +390,7 @@ public class Robots2PinsTransformer {
 
 		// setting all values for all non direct types
 		for (int tindex = 0; tindex < (5*nbPos); tindex++) {
-			pw.println("  pins_chunk_put(m, action_type, chunk_str(\"tr" + tindex + "\"));");
+			pw.println("  pins_chunk_put(m, action_type, chunk_str(\"tr" + (tindex/5) +"_" + Action.values()[tindex%5] + "\"));");
 		}
 
 		// pw.println(" GBchunkPut(m, bool_type, chunk_str(LTSMIN_VALUE_BOOL_FALSE));");
@@ -598,7 +661,8 @@ public class Robots2PinsTransformer {
 	}
 
 	private int labelCount() {
-		return ((5*nbPos) + listAtoms.size() + invAtoms.size());
+		// TODO: what AP do we need ?
+		return 0 ; //((5*nbPos) + listAtoms.size() + invAtoms.size());
 	}
 
 	public void printMatrix(PrintWriter pw, String matrixName, IntMatrixCol matrix) {
