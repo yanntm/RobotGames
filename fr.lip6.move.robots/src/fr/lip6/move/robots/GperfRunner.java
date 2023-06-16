@@ -59,7 +59,7 @@ public class GperfRunner {
 	        pw.println("/* C code */");
 	        pw.println("%}");
 	        pw.println("struct Record {");
-	        pw.println("  const char *key;");
+	        pw.println("  const char *name;");
 	        pw.println("  int index;");
 	        pw.println("};");
 	        pw.println("%%");
