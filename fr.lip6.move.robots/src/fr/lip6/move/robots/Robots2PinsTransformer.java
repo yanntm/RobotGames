@@ -363,7 +363,7 @@ public class Robots2PinsTransformer {
 
 		pw.println("  lts_type_set_state_label_count (ltstype, "+labelCount()+");");
 		
-		{			
+		if (false) {			
 			for (int ii=0, ie=labelCount() ; ii < ie ; ii++) {
 				pw.println("    lts_type_set_state_label_typeno (ltstype, "+ii+", bool_type);");
 			}
@@ -737,7 +737,7 @@ public class Robots2PinsTransformer {
 
 		pw.println("// Calculate the number of robots at each position and rotate");
 		pw.println("for (i = 0; i < "+nbPos+"; i++) {");
-		pw.println("observation[i] = (char)(state[pos*6+5] & 0xFF) + 1;  // Convert sum to char and increment by 1");
+		pw.println("observation[i] = (char)(state[ ((pos+i)*6+5) % "+ (6*nbPos) +" ]  & 0xFF) + 1;  // Convert sum to char and increment by 1");
 		pw.println("}");
 
 		pw.println("// If it's not reversed maximal, reflect it");
