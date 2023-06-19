@@ -14,7 +14,7 @@ import fr.lip6.move.gal.process.Runner;
 
 public class GperfRunner {
 
-	public static String runGperf(List<int[]>[] observations, String outputDir) throws IOException, InterruptedException {
+	public static String runGperf(List<int[]>[] observations, String outputDir) throws IOException {
 	    long timeout = 100;
 		CommandLine gperf = new CommandLine();
 	    gperf.addArg("gperf");
@@ -46,6 +46,8 @@ public class GperfRunner {
 	    } catch (TimeoutException to) {
 	        System.out.println("WARNING : gperf timed out (>"+timeout+" s) on command " + gperf);
 	        return null;
+	    } catch (InterruptedException e) {
+	    	throw new IOException(e);
 	    }
 	}
 
