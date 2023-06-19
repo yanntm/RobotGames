@@ -247,7 +247,7 @@ public class Robots2PinsTransformer {
 			if (a == Action.LOOK) {
 				// we read all "total" cells
 				for (int i=0,ie=nbPos; i<ie; i++) {
-					reads.put(i*Action.TOTAL.ordinal(), 1);
+					reads.put(i*6 + Action.TOTAL.ordinal(), 1);
 				}
 				// we read and write at our position (all cells except TOTAL)
 				for (int i=0,ie=5; i<ie; i++) {
@@ -449,7 +449,7 @@ public class Robots2PinsTransformer {
 				"      dm_set(lm, i, label_matrix(i)[j]);\n" + "    }\n" + "  }\n" + "  GBsetStateLabelInfo(m, lm);");
 
 		// set guards
-		pw.println("  GBsetGuardsInfo(m,(guard_t**) &guardsPerTrans);");
+		// pw.println("  GBsetGuardsInfo(m,(guard_t**) &guardsPerTrans);");
 
 		pw.println("  int sl_size = label_count();");
 		pw.println("  int nguards = " + (5*nbPos) + ";");
@@ -519,7 +519,7 @@ public class Robots2PinsTransformer {
 	}
 
 	private void printLabels(PrintWriter pw, List<int[]> rm, List<int[]> wm) {
-
+		/*
 		List<int[]> guards = new ArrayList<>();
 
 		for (int i = 0; i < (5*nbPos); i++) {
@@ -542,7 +542,7 @@ public class Robots2PinsTransformer {
 			pw.println();
 		}
 		pw.println("};");
-
+		*/
 		pw.println("int group_count() {");
 		pw.println("  return " + (5*nbPos) + " ;");
 		pw.println("}");
@@ -564,11 +564,12 @@ public class Robots2PinsTransformer {
 		}
 		if (listAtoms.size() + invAtoms.size() > 0)
 			printMatrix(pw, "lm", lm);
-		pw.print("int* label_matrix(int row) {\n" + "  if (row < " + (5*nbPos) + ") return rm[row];\n");
-		if (listAtoms.size() + invAtoms.size() > 0) {
-			pw.print("  else return lm[row-" + (5*nbPos) + "];\n");
-		}
-		pw.print("}\n");
+		pw.print("int* label_matrix(int row) { return lm[row];}\n");
+//		pw.print("int* label_matrix(int row) {\n" + "  if (row < " + (5*nbPos) + ") return rm[row];\n");
+//		if (listAtoms.size() + invAtoms.size() > 0) {
+//			pw.print("  else return lm[row-" + (5*nbPos) + "];\n");
+//		}
+//		pw.print("}\n");
 
 		if (!hasPartialOrder) {
 			return;
@@ -798,10 +799,7 @@ public class Robots2PinsTransformer {
 
 				if (a == Action.LOOK) {
 					pw.append("  if (cur.state ["+ (pos*6+ Action.LOOK.ordinal())+"] > 0) { ");
-					if (DEBUG >= 1) {
-						pw.println("  for (int i=0;i < "+(6*nbPos)+";i++) printf(\"%d,\",cur.state[i]);");
-						pw.println("  printf(\" NEXT : pos="+pos+" A="+a +"\\n\");");
-					}
+					traceTransitions(pw, pos, a);
 					
 					pw.println("  int obs = get_observation(cur.state,group/5);");
 					pw.println("  int act = strat(obs);");
@@ -813,10 +811,7 @@ public class Robots2PinsTransformer {
 					pw.println("     break;");
 				} else if (a == Action.LEFT) {
 					pw.append("  if (cur.state ["+ (pos*6+ Action.LEFT.ordinal())+"] > 0) { ");
-					if (DEBUG >= 1) {
-						pw.println("  for (int i=0;i < "+(6*nbPos)+";i++) printf(\"%d,\",cur.state[i]);");
-						pw.println("  printf(\" NEXT : pos="+pos+" A="+a +"\\n\");");
-					}
+					traceTransitions(pw, pos, a);
 					int left = (pos + nbPos-1) %  nbPos ;
 					// we read and update LOOK and TOTAL of pos-1%N
 					pw.println("   cur.state[ " + (left*6 + Action.LOOK.ordinal()) + "] ++;");
@@ -830,10 +825,7 @@ public class Robots2PinsTransformer {
 					pw.println("     break;");
 					} else if (a == Action.RIGHT) {
 						pw.append("  if (cur.state ["+ (pos*6+ Action.RIGHT.ordinal())+"] > 0) { ");
-						if (DEBUG >= 1) {
-							pw.println("  for (int i=0;i < "+(6*nbPos)+";i++) printf(\"%d,\",cur.state[i]);");
-							pw.println("  printf(\" NEXT : pos="+pos+" A="+a +"\\n\");");
-						}
+						traceTransitions(pw, pos, a);
 						int right = (pos + 1) % nbPos;
 						// we read and update LOOK and TOTAL of pos+1%N
 						pw.println("   cur.state[ " + (right*6 + Action.LOOK.ordinal()) + "] ++;");
@@ -847,10 +839,7 @@ public class Robots2PinsTransformer {
 						pw.println("     break;");
 					} else if (a == Action.STAY) {
 						pw.append("  if (cur.state ["+ (pos*6+ Action.STAY.ordinal())+"] > 0) { ");
-						if (DEBUG >= 1) {
-							pw.println("  for (int i=0;i < "+(6*nbPos)+";i++) printf(\"%d,\",cur.state[i]);");
-							pw.println("  printf(\" NEXT : pos="+pos+" A="+a +"\\n\");");
-						}
+						traceTransitions(pw, pos, a);
 						// we read and update LOOK and STAY of pos
 						pw.println("   cur.state[ " + (pos*6 + Action.STAY.ordinal()) + "] --;");
 						pw.println("   cur.state[ " + (pos*6 + Action.LOOK.ordinal()) + "] ++;");
@@ -862,10 +851,7 @@ public class Robots2PinsTransformer {
 					} else if (a == Action.MOVE) {
 						// we read and update MOVE and TOTAL of pos
 						pw.append("  if (cur.state ["+ (pos*6+ Action.MOVE.ordinal())+"] > 0) { ");
-						if (DEBUG >= 1) {
-							pw.println("  for (int i=0;i < "+(6*nbPos)+";i++) printf(\"%d,\",cur.state[i]);");
-							pw.println("  printf(\" NEXT : pos="+pos+" A="+a +"\\n\");");
-						}
+						traceTransitions(pw, pos, a);
 						
 						int left = (pos + nbPos-1) %  nbPos ;
 						pw.println("   cur.state[ " + (pos*6 + Action.MOVE.ordinal()) + "] --;");
@@ -983,6 +969,16 @@ public class Robots2PinsTransformer {
 		    pw.println("};");
 			pw.println("const char * get_state_label_name(int label) { return labelnames[label] ;} ");
 		
+		}
+	}
+
+	public void traceTransitions(PrintWriter pw, int pos, Action a) {
+		if (DEBUG >= 1) {
+			pw.println("  for (int i=0;i < "+(6*nbPos)+";i++) printf(\"%d,\",src[i]);");
+			pw.println("  printf(\" NEXT : pos="+pos+" A="+a +"\");");
+			pw.println("  for (int i=0;i < "+(6*nbPos)+";i++) printf(\"%d,\",cur.state[i]);");
+			pw.println("printf(\"\\n\");");
+			
 		}
 	}
 
