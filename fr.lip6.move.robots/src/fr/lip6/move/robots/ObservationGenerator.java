@@ -56,7 +56,7 @@ public class ObservationGenerator {
         }
     }
 
-    private static boolean isReversedMaximal(int[] observation) {
+    public static boolean isReversedMaximal(int[] observation) {
         for (int i = 1, j = observation.length - 1; i < j; i++, j--) {
             if (observation[i] > observation[j]) {
                 return true;
