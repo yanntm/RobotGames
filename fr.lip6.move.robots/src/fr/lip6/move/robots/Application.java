@@ -52,8 +52,9 @@ public class Application implements IApplication {
 			
 			int[] strategy = solver.readStrategy();
 
-			
 			LTSminRunner runner = new LTSminRunner(observations, false, 100, workFolder);
+			runner.initialize();
+						
 			runner.solve(strategy);
 
 			
