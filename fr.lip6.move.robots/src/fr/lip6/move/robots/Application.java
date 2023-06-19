@@ -4,7 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.equinox.app.IApplication;
 import org.eclipse.equinox.app.IApplicationContext;
@@ -16,14 +19,14 @@ public class Application implements IApplication {
 	private static final String NB_POS = "-N";
 	private static final int DEBUG=0;
 	
-	public Object start(IApplicationContext context) throws Exception {
+	public Object start(IApplicationContext context) {
 		
 		String [] args = (String[]) context.getArguments().get(APPARGS);
 
 		int timeout = 3600;
-		
-		int nbRobot=3;
-		int nbPos=4;
+		long time = System.currentTimeMillis();
+		int nbRobot=4;
+		int nbPos=8;
 		
 		for (int i=0; i < args.length ; i++) {
 			if (NB_ROBOT.equals(args[i])) {
@@ -37,11 +40,23 @@ public class Application implements IApplication {
 
 		// use gperf to index our observations
 		
+		int nbIter=0;
+		
 		try {
 			File workFolder = Files.createTempDirectory("gperf").toFile();
 			if (DEBUG < 2) workFolder.deleteOnExit();
 			
 			GperfRunner.runGperf(observations, workFolder.getCanonicalPath());
+			
+			Map<String,Integer> obsMap = new HashMap<>();
+			{
+				int index = 0;
+				for (List<int[]> elem : observations) {
+					for (int [] obs : elem) {
+						obsMap.put(Arrays.toString(obs), index++);
+					}
+				}
+			}
 			
 			Robots2PinsTransformer r2t = new Robots2PinsTransformer();
 			r2t.transform(workFolder.getCanonicalPath(), false, false, nbPos, nbRobot, null);
@@ -50,16 +65,33 @@ public class Application implements IApplication {
 			SMTSolver solver = new SMTSolver();		
 			solver.declareVariables(observations);
 			
+			try {
+			
 			int[] strategy = solver.readStrategy();
 
 			LTSminRunner runner = new LTSminRunner(observations, false, 100, workFolder);
 			runner.initialize();
-						
-			runner.solve(strategy);
-
 			
-			printStrategy(observations,strategy);		
+			while (true) {
+				System.out.println("Running iteration "+(nbIter++)+" with a new strategy.");
+				String res = runner.solve(strategy);
+				if ("TRUE".equals(res)) {
+					System.out.println("Found a winning strategy after "+nbIter+ " iterations in "+(System.currentTimeMillis() - time)+" ms.");
+					printStrategy(observations,strategy);		
+					break;
+				} else {
+					
+					System.out.println("Found a counter example.");
+					Set<Integer> used = TraceAnalyzer.extractTrace(workFolder, nbPos, obsMap);
+					
+					solver.addConstraint(used, strategy);
+					strategy = solver.readStrategy();					
+				}
+			}
 			
+			} catch (NoStrategyExistsException e) {
+				System.out.println("Process concluded that no strategy exists after "+nbIter + " iterations in "+(System.currentTimeMillis() - time)+" ms." );
+			}
 			
 			solver.quit();
 
