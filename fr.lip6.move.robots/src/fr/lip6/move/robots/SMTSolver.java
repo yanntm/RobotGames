@@ -1,11 +1,14 @@
 package fr.lip6.move.robots;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import org.smtlib.IResponse;
 import org.smtlib.ISolver;
 import org.smtlib.SMT;
+import org.smtlib.IExpr;
 import org.smtlib.IExpr.IFactory;
 import org.smtlib.IExpr.ISymbol;
 import org.smtlib.command.C_assert;
@@ -49,6 +52,18 @@ public class SMTSolver {
 		SMTUtils.execAndCheckResult(script, solver);
 	}
 
+	public void addConstraint(Set<Integer> trace, int [] strat) {
+		IFactory ef = smt.smtConfig.exprFactory;
+		
+		List<IExpr> expr = new ArrayList<>();
+		for (Integer obs : trace) {
+			expr.add(ef.fcn(ef.symbol("not"),ef.fcn(ef.symbol("="), ef.symbol("s"+obs), ef.numeral(strat[obs]))));
+		}
+		Script s = new Script();
+		s.add(new C_assert(SMTUtils.makeOr(expr)));
+		
+		SMTUtils.execAndCheckResult(s, solver);
+	}
 
 	public int[] readStrategy() throws NoStrategyExistsException {
 		String response = SMTUtils.checkSat(solver);
