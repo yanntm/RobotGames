@@ -39,7 +39,7 @@ public class LTSminRunner {
 				compileStrat(10);
 				System.out.println("Built C files in : \n" + new File(workFolder + "/"));
 
-				compilePINS((int)Math.max(2, timeout/5));
+//				compilePINS((int)Math.max(2, timeout/5));
 				linkPINS(Math.max(1, timeout/5));
 			} catch (TimeoutException to) {
 				throw new RuntimeException("Compilation or link of executable timed out." + to);
@@ -99,7 +99,10 @@ public class LTSminRunner {
 		ltsmin.addArg(pbody);
 		// ltsmin.addArg("--strategy=renault");
 		ltsmin.addArg("--buchi-type=spotba");
-
+		
+		ltsmin.addArg("--trace");
+		ltsmin.addArg("trace.gcf");
+		
 		// ltsmin.addArg("--ltl-semantics");
 		// ltsmin.addArg("spin");
 		try {
@@ -132,7 +135,7 @@ public class LTSminRunner {
 			//doneProps.put(pname,"TRUE".equals(ress),(withPOR ? "PARTIAL_ORDER ":"") + "EXPLICIT LTSMIN SAT_SMT");
 			System.out.flush();
 
-			return "trace.gcf";
+			return ress;
 		} catch (TimeoutException to) {
 			System.out.println("WARNING : LTSmin timed out (>"+timeout+" s) on command " + ltsmin);
 			return null;
@@ -228,6 +231,16 @@ public class LTSminRunner {
 
 	public void setStrategy(int [] strategy) {
 		this.strategy = strategy;
+	}
+
+
+	public void initialize() {
+		try {
+			compilePINS(10);
+		} catch (IOException | TimeoutException | InterruptedException e) {
+			e.printStackTrace();
+		}
+		
 	}
 
 }
