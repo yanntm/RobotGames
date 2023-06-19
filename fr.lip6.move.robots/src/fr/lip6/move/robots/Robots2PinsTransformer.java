@@ -449,21 +449,21 @@ public class Robots2PinsTransformer {
 				"      dm_set(lm, i, label_matrix(i)[j]);\n" + "    }\n" + "  }\n" + "  GBsetStateLabelInfo(m, lm);");
 
 		// set guards
-		// pw.println("  GBsetGuardsInfo(m,(guard_t**) &guardsPerTrans);");
+//		pw.println("  GBsetGuardsInfo(m,(guard_t**) &guardsPerTrans);");
 
 		pw.println("  int sl_size = label_count();");
-		pw.println("  int nguards = " + (5*nbPos) + ";");
+//		pw.println("  int nguards = " + (5*nbPos) + ";");
 		// set the label group implementation
 		pw.println("  sl_group_t* sl_group_all = malloc(sizeof(sl_group_t) + sl_size * sizeof(int));");
 		pw.println("  sl_group_all->count = sl_size;");
 		pw.println("  for(int i=0; i < sl_group_all->count; i++) sl_group_all->sl_idx[i] = i;");
 		pw.println("  GBsetStateLabelGroupInfo(m, GB_SL_ALL, sl_group_all);");
-		pw.println("  if (nguards > 0) {");
-		pw.println("    sl_group_t* sl_group_guards = malloc(sizeof(sl_group_t) + nguards * sizeof(int));");
-		pw.println("    sl_group_guards->count = nguards;");
-		pw.println("    for(int i=0; i < sl_group_guards->count; i++) sl_group_guards->sl_idx[i] = i;");
-		pw.println("    GBsetStateLabelGroupInfo(m, GB_SL_GUARDS, sl_group_guards);");
-		pw.println("  }");
+//		pw.println("  if (nguards > 0) {");
+//		pw.println("    sl_group_t* sl_group_guards = malloc(sizeof(sl_group_t) + nguards * sizeof(int));");
+//		pw.println("    sl_group_guards->count = nguards;");
+//		pw.println("    for(int i=0; i < sl_group_guards->count; i++) sl_group_guards->sl_idx[i] = i;");
+//		pw.println("    GBsetStateLabelGroupInfo(m, GB_SL_GUARDS, sl_group_guards);");
+//		pw.println("  }");
 		// get state labels
 		pw.println("  GBsetStateLabelsGroup(m, sl_group);");
 
@@ -1028,7 +1028,7 @@ public class Robots2PinsTransformer {
 		if (listAtoms != null) {
 			this.listAtoms = listAtoms;
 		} 
-		this.listAtoms.add(new AtomicProp("tower", Expression.op(Op.EQ, Expression.var(1), Expression.constant(Action.STAY.ordinal()))));
+		this.listAtoms.add(new AtomicProp("tower", Expression.op(Op.EQ, Expression.var(Action.STAY.ordinal()), Expression.constant(nbRobots))));
 		hasPartialOrder = withPorMatrix;
 		try {
 			buildBodyFile(cwd + "/model.c");
