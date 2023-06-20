@@ -75,7 +75,7 @@ public class GperfRunner {
 	                    char c = (char) ((observation[k] & 0xFF) + 1);
 	                    sb.append(c);
 	                }
-	                pw.println(sb.toString() + ", " + (i * observations[i].size() + j));
+	                pw.println(sb.toString() + ", " + (i * observations[0].size() + j));
 	            }
 	        }
 
