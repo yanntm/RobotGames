@@ -86,7 +86,7 @@ public class LTSminRunner {
 		ltsmin.addArg(BinaryToolsPlugin.getProgramURI(Tool.mc).getPath().toString());
 		ltsmin.addArg("./gal.so");
 
-		ltsmin.addArg("--threads=8");
+		ltsmin.addArg("--threads=1");
 		boolean withPOR = false;
 		if (doPOR) {
 			ltsmin.addArg("-p");
@@ -94,11 +94,14 @@ public class LTSminRunner {
 			//ltsmin.addArg("--no-V");
 			withPOR = true;
 		}
-		ltsmin.addArg("--when");
+		//ltsmin.addArg("--when");
 		ltsmin.addArg("--ltl");
 		ltsmin.addArg(pbody);
-		// ltsmin.addArg("--strategy=renault");
+//		ltsmin.addArg("--strategy=lndfs");
+		ltsmin.addArg("--strategy=ufscc");
 		ltsmin.addArg("--buchi-type=spotba");
+		
+		//ltsmin.addArg("-v");
 		
 		ltsmin.addArg("--trace");
 		ltsmin.addArg("trace.gcf");
