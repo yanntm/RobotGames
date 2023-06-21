@@ -60,7 +60,7 @@ public class LTSminRunner {
 	public String checkProperties(long time) 
 			throws IOException, InterruptedException {
 
-		String property = "<>((LTLAPtower==true))";
+		String property = "([](<>(LTLAPsched==true)))->(<>([](LTLAPtower==true)))";
 		return checkProperty("goal",property,time);
 	}
 	
