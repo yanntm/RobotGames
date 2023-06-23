@@ -18,7 +18,7 @@ public class TraceAnalyzer {
 
 	private static final int DEBUG = 0;
 
-	public static Set<Integer> extractTrace(File workingDir, int nbPos, Map<String, Integer> obsMap) {
+	public static Set<Integer> extractTrace(File workingDir, int nbPos, Map<String, Integer> obsMap, Map<String, Action> rigid) {
 		CommandLine ltsmin = new CommandLine();
 		ltsmin.setWorkingDir(workingDir);
 		ltsmin.addArg("/home/ythierry/git/LTSmin-BinaryBuilds/ltsmin/src/ltsmin-printtrace/ltsmin-printtrace");
@@ -46,7 +46,10 @@ public class TraceAnalyzer {
 				System.out.flush();
 			}
 			final Set<Integer> result = new HashSet<>();
-
+			int traceLen = 0;
+			int rigidLen = 0;
+			int lookLen = 0;
+			
 			try (BufferedReader br = new BufferedReader(new FileReader(workingDir.getCanonicalPath()+"/trace.csv"))) {
 				for (String line=br.readLine() ; line != null ; line = br.readLine()) 
 				{
@@ -54,6 +57,7 @@ public class TraceAnalyzer {
 
 					String action = words[words.length -1];
 					if (action.endsWith("LOOK\"")) {
+						lookLen++;
 						int pos = Integer.parseInt(action.split("_")[0].replace("\"tr",""));
 
 						int [] obs = new int [nbPos];
@@ -67,10 +71,17 @@ public class TraceAnalyzer {
 								obs[j] = temp;
 							}
 						}
-						result.add(obsMap.get(Arrays.toString(obs)));
+						String key = Arrays.toString(obs);
+						if (! rigid.containsKey(key)) {
+							result.add(obsMap.get(key));
+						} else {
+							rigidLen++;
+						}
 					}
+					traceLen ++;
 				}
 					
+				System.out.println("Analyzed a counter-example of " + (traceLen-1) + " steps of which " + lookLen + " uses of the strategy ("+ rigidLen + " fixed), building constraint involving "+ result.size()+ " observations." );
 
 				return result;
 
