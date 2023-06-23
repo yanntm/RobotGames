@@ -140,7 +140,7 @@ public class ObservationGenerator {
     }
 
     
-    public static List<int[]>[] filterRigidObservations(List<int[]>[] observations, Map<int[], Action> rigid) {
+    public static List<int[]>[] filterRigidObservations(List<int[]>[] observations, Map<String, Action> rigid) {
         @SuppressWarnings("unchecked")
 		List<int[]>[] newObservations = new ArrayList[2];
 
@@ -153,7 +153,7 @@ public class ObservationGenerator {
                 if (action == Action.TOTAL) {
                     newObservations[i].add(observation);
                 } else {
-                    rigid.put(observation, action);
+                    rigid.put(Arrays.toString(observation), action);
                 }
             }
         }
