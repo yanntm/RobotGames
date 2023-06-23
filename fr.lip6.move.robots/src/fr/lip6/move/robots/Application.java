@@ -27,8 +27,8 @@ public class Application implements IApplication {
 
 		int timeout = 3600;
 		long time = System.currentTimeMillis();
-		int nbRobot=4;
-		int nbPos=5;
+		int nbRobot=6;
+		int nbPos=7;
 		
 		for (int i=0; i < args.length ; i++) {
 			if (NB_ROBOT.equals(args[i])) {
@@ -39,17 +39,25 @@ public class Application implements IApplication {
 		}
 		System.out.println("Running strategy search for K="+nbRobot +" on a ring of N="+nbPos +" positions.");
 		List<int[]>[] observations = ObservationGenerator.generateSplitObservations(nbPos, nbRobot);
-		int totalObs = observations[0].size() + observations[1].size();
-		BigInteger symSize = BigInteger.valueOf(observations[0].size());
-		BigInteger asymSize = BigInteger.valueOf(observations[1].size());
-
-		BigInteger result = symSize.pow(2).multiply(asymSize.pow(3));
-
-		System.out.println("Total number of observation : symmetric :" + symSize + " asymmetric :"
-		        + asymSize + " total :" + totalObs);
-
-		System.out.println("Estimated size of strategy search space : " + result);
+		printSizes(observations);
 		// use gperf to index our observations
+		
+		Map<String, Integer> obsMap = new HashMap<>();
+	    {
+	        int index = 0;
+	        for (List<int[]> elem : observations) {
+	            for (int [] obs : elem) {
+	                obsMap.put(Arrays.toString(obs), index++);
+	            }
+	        }
+	    }
+	    int totalObs = observations[0].size() + observations[1].size();
+		
+		Map<int[], Action> rigid = new HashMap<>();
+		List<int[]>[] redObservations = ObservationGenerator.filterRigidObservations(observations, rigid );
+		System.out.println("After filtering, found "+rigid.size()+" observations.");
+		printSizes(redObservations);
+		
 		
 		int nbIter=0;
 		
@@ -60,15 +68,6 @@ public class Application implements IApplication {
 			
 			GperfRunner.runGperf(observations, workFolder.getCanonicalPath());
 			
-			Map<String,Integer> obsMap = new HashMap<>();
-			{
-				int index = 0;
-				for (List<int[]> elem : observations) {
-					for (int [] obs : elem) {
-						obsMap.put(Arrays.toString(obs), index++);
-					}
-				}
-			}
 			
 			Robots2PinsTransformer r2t = new Robots2PinsTransformer();
 			r2t.transform(workFolder.getCanonicalPath(), false, false, nbPos, nbRobot, null);
@@ -76,6 +75,7 @@ public class Application implements IApplication {
 			// setup SMT solver
 			SMTSolver solver = new SMTSolver();		
 			solver.declareVariables(observations);
+			solver.setRigidStrategy(rigid, obsMap);
 			
 			try {
 			
@@ -116,6 +116,26 @@ public class Application implements IApplication {
 		
 		
 		return IApplication.EXIT_OK;
+	}
+
+	public void printSizes(List<int[]>[] observations) {
+		BigInteger symSize = BigInteger.valueOf(observations[0].size());
+		BigInteger asymSize = BigInteger.valueOf(observations[1].size());
+
+		
+		System.out.println("Total number of observation : symmetric :" + symSize + " asymmetric :"
+		        + asymSize + " total :" + symSize.add(asymSize));
+
+		BigInteger result;
+		if (observations[0].size() == 0) {
+			result = symSize.pow(2);
+		} else if (observations[1].size() == 0) {
+			result = asymSize.pow(3);
+		} else {
+			result = symSize.pow(2).multiply(asymSize.pow(3));
+		}
+
+		System.out.println("Estimated size of strategy search space : " + result);
 	}
 	
 	private void printStrategy(List<int[]>[] observations, int[] strategy) {
