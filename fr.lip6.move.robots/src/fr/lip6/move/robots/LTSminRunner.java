@@ -17,15 +17,18 @@ public class LTSminRunner {
 	private boolean doPOR;
 	private File workFolder;
 	private long timeout;
+	private Statistics stats;
 
-	public LTSminRunner(boolean doPOR, long timeout, File work) {
+	public LTSminRunner(boolean doPOR, long timeout, File work, Statistics stats) {
 		this.doPOR = doPOR;
 		this.workFolder = work;
 		this.timeout = timeout;
+		this.stats = stats;
 	}
 
 
 	public String solve(int [] strategy) {
+		long time= System.currentTimeMillis();
 		try {
 			
 			try {
@@ -36,11 +39,14 @@ public class LTSminRunner {
 
 //				compilePINS((int)Math.max(2, timeout/5));
 				linkPINS(Math.max(1, timeout/5));
+				stats.reportTime(fr.lip6.move.robots.Tool.GCC, System.currentTimeMillis() - time);
 			} catch (TimeoutException to) {
 				throw new RuntimeException("Compilation or link of executable timed out." + to);
 			}
-
-			return checkProperties(timeout);
+			time = System.currentTimeMillis();
+			String res= checkProperties(timeout);
+			stats.reportTime(fr.lip6.move.robots.Tool.LTSMin, System.currentTimeMillis() - time);			
+			return res;
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
