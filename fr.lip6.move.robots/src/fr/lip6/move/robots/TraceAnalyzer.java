@@ -18,7 +18,8 @@ public class TraceAnalyzer {
 
 	private static final int DEBUG = 0;
 
-	public static Set<Integer> extractTrace(File workingDir, int nbPos, Map<String, Integer> obsMap, Map<String, Action> rigid) {
+	public static Set<Integer> extractTrace(File workingDir, int nbPos, Map<String, Integer> obsMap, Map<String, Action> rigid, Statistics stats, boolean enlarge) {
+		long time = System.currentTimeMillis();
 		CommandLine ltsmin = new CommandLine();
 		ltsmin.setWorkingDir(workingDir);
 		ltsmin.addArg("/home/ythierry/git/LTSmin-BinaryBuilds/ltsmin/src/ltsmin-printtrace/ltsmin-printtrace");
@@ -27,8 +28,7 @@ public class TraceAnalyzer {
 		int timeout = 10;
 		try {
 			File outputff = Files.createTempFile("ltsrun", ".out").toFile();
-			outputff.deleteOnExit();
-			long time = System.currentTimeMillis();
+			outputff.deleteOnExit();			
 			if (DEBUG >= 1) {
 				System.out.println("Running LTSmin : " + ltsmin);
 			}
@@ -49,7 +49,7 @@ public class TraceAnalyzer {
 			int traceLen = 0;
 			int rigidLen = 0;
 			int lookLen = 0;
-			
+			Set<Integer> usedRigid = new HashSet<>(); 
 			try (BufferedReader br = new BufferedReader(new FileReader(workingDir.getCanonicalPath()+"/trace.csv"))) {
 				for (String line=br.readLine() ; line != null ; line = br.readLine()) 
 				{
@@ -75,14 +75,17 @@ public class TraceAnalyzer {
 						if (! rigid.containsKey(key)) {
 							result.add(obsMap.get(key));
 						} else {
+							usedRigid.add(obsMap.get(key));
 							rigidLen++;
 						}
 					}
 					traceLen ++;
 				}
 					
-				System.out.println("Analyzed a counter-example of " + (traceLen-1) + " steps of which " + lookLen + " uses of the strategy ("+ rigidLen + " fixed), building constraint involving "+ result.size()+ " observations." );
-
+				System.out.println("Analyzed a counter-example of " + (traceLen-1) + " steps of which " + lookLen + " uses of the strategy ("+ usedRigid.size() + " fixed), building constraint involving "+ result.size()+ " observations." );
+				if (enlarge)
+					result.addAll(usedRigid);
+				stats.reportTime(Tool.Trace, System.currentTimeMillis() - time);
 				return result;
 
 
