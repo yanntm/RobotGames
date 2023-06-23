@@ -23,7 +23,7 @@ import fr.lip6.move.gal.util.IntMatrixCol;
 
 public class Robots2PinsTransformer {
 
-	private static final int DEBUG = 2;
+	private static final int DEBUG = 0;
 	private int nbRobots;
 	private int nbPos;
 	private boolean hasPartialOrder=false;
@@ -875,8 +875,6 @@ public class Robots2PinsTransformer {
 		if (!forSpot) {
 			pw.println("int next_state(void* model, int group, int *src, TransitionCB callback, void *arg) {");
 
-			pw.println("  state_t cur ;\n");
-			pw.println("  memcpy( cur.state, src,  sizeof(int)* " + (11*nbPos) + ");\n");
 			pw.println("  // provide transition labels and group number of transition.");
 			pw.println("  int action[1];");
 			// use the same identifier for group and action
@@ -892,8 +890,10 @@ public class Robots2PinsTransformer {
 				pw.println("    // pos="+pos+" "+a);
 
 				if (a == Action.LOOK) {
-					pw.append("  if (cur.state ["+ (pos*6+ Action.LOOK.ordinal())+"] > 0) { ");
-					
+					pw.append("  if (src ["+ (pos*6+ Action.LOOK.ordinal())+"] > 0) { ");
+					pw.println("  state_t cur ;\n");
+					pw.println("  memcpy( cur.state, src,  sizeof(int)* " + (11*nbPos) + ");\n");
+
 					pw.println("  int isReflected=0;");
 					pw.println("  int obs = get_observation(cur.state,group/5,&isReflected);");
 					pw.println("  if (obs<0) {");
@@ -917,8 +917,10 @@ public class Robots2PinsTransformer {
 					pw.println("     }");
 					pw.println("     break;");
 				} else if (a == Action.LEFT) {
-					pw.append("  if (cur.state ["+ (pos*6+ Action.LEFT.ordinal())+"] > 0) { ");
-					
+					pw.append("  if (src ["+ (pos*6+ Action.LEFT.ordinal())+"] > 0) { ");
+					pw.println("  state_t cur ;\n");
+					pw.println("  memcpy( cur.state, src,  sizeof(int)* " + (11*nbPos) + ");\n");
+
 					int left = (pos + nbPos-1) %  nbPos ;
 					// we read and update LOOK and TOTAL of pos-1%N
 					pw.println("   cur.state[ " + (left*6 + Action.LOOK.ordinal()) + "] ++;");
@@ -939,7 +941,9 @@ public class Robots2PinsTransformer {
 					pw.println("     }");
 					pw.println("     break;");
 					} else if (a == Action.RIGHT) {
-						pw.append("  if (cur.state ["+ (pos*6+ Action.RIGHT.ordinal())+"] > 0) { ");						
+						pw.append("  if (src ["+ (pos*6+ Action.RIGHT.ordinal())+"] > 0) { ");						
+						pw.println("  state_t cur ;\n");
+						pw.println("  memcpy( cur.state, src,  sizeof(int)* " + (11*nbPos) + ");\n");
 						int right = (pos + 1) % nbPos;
 						// we read and update LOOK and TOTAL of pos+1%N
 						pw.println("   cur.state[ " + (right*6 + Action.LOOK.ordinal()) + "] ++;");
@@ -961,8 +965,10 @@ public class Robots2PinsTransformer {
 						pw.println("     }");
 						pw.println("     break;");
 					} else if (a == Action.STAY) {
-						pw.append("  if (cur.state ["+ (pos*6+ Action.STAY.ordinal())+"] > 0) { ");
-						
+						pw.append("  if (src ["+ (pos*6+ Action.STAY.ordinal())+"] > 0) { ");
+						pw.println("  state_t cur ;\n");
+						pw.println("  memcpy( cur.state, src,  sizeof(int)* " + (11*nbPos) + ");\n");
+
 						// we read and update LOOK and STAY of pos
 						pw.println("   cur.state[ " + (pos*6 + Action.STAY.ordinal()) + "] --;");
 						pw.println("   cur.state[ " + (pos*6 + Action.LOOK.ordinal()) + "] ++;");
@@ -982,9 +988,11 @@ public class Robots2PinsTransformer {
 						
 					} else if (a == Action.MOVE) {
 						// we read and update MOVE and TOTAL of pos
-						pw.append("  if (cur.state ["+ (pos*6+ Action.MOVE.ordinal())+"] > 0) { ");
+						pw.append("  if (src ["+ (pos*6+ Action.MOVE.ordinal())+"] > 0) { ");
 						
-						
+						pw.println("  state_t cur ;\n");
+						pw.println("  memcpy( cur.state, src,  sizeof(int)* " + (11*nbPos) + ");\n");
+
 						int left = (pos + nbPos-1) %  nbPos ;
 						pw.println("   cur.state[ " + (pos*6 + Action.MOVE.ordinal()) + "] --;");
 						pw.println("   cur.state[ " + (pos*6 + Action.TOTAL.ordinal()) + "] --;");
@@ -1036,6 +1044,9 @@ public class Robots2PinsTransformer {
 				pw.print(" src["+ (6*nbPos+i) + "]");
 			}
 			pw.println(" == "+nbRobots +") {");
+			pw.println("  state_t cur ;\n");
+			pw.println("  memcpy( cur.state, src,  sizeof(int)* " + (11*nbPos) + ");\n");
+
 			for (int i=0;i < 5*nbPos ; i++) {
 				pw.println("cur.state[" +(6*nbPos+i)+ "]=0;");
 			}
