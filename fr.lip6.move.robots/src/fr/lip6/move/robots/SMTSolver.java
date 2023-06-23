@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.smtlib.IResponse;
@@ -24,33 +25,33 @@ import fr.lip6.move.gal.structural.smt.SMTUtils;
 public class SMTSolver {
 	private org.smtlib.SMT smt = new SMT();
 	private ISolver solver = SMTUtils.initSolver(smt,"QF_LIA",7200,7200);
-	private int nbVar;
+	private int [] fixedStrat;
 
-	public void declareVariables(List<int[]>[] observations) {
-		int nbSym = observations[0].size();
-		nbVar = nbSym + observations[1].size();
-
+	public void declareVariables(List<int[]>[] observations, Map<String, Integer> obsMap) {
 		Script script = new Script();
 		IFactory ef = smt.smtConfig.exprFactory;
 		org.smtlib.ISort.IApplication ints = smt.smtConfig.sortFactory.createSortExpression(ef.symbol("Int"));
 
-		for (int i=0 ; i < nbVar ; i++) {
-			ISymbol si = ef.symbol("s"+i);
+		for (int[] obs : observations[0]) {
+			ISymbol si = ef.symbol("s"+ obsMap.get(Arrays.toString(obs)));
 			script.add(new org.smtlib.command.C_declare_fun(
 					si,
 					Collections.emptyList(),
 					ints								
 					));
-			if (i < nbSym) {
-				script.add(new C_assert(ef.fcn(ef.symbol(">="), si, ef.numeral(Action.MOVE.ordinal()))));
-				script.add(new C_assert(ef.fcn(ef.symbol("<="), si, ef.numeral(Action.STAY.ordinal()))));
-			} else {
-				script.add(new C_assert(ef.fcn(ef.symbol(">="), si, ef.numeral(Action.STAY.ordinal()))));
-				script.add(new C_assert(ef.fcn(ef.symbol("<="), si, ef.numeral(Action.RIGHT.ordinal()))));				
-			}
+			script.add(new C_assert(ef.fcn(ef.symbol(">="), si, ef.numeral(Action.MOVE.ordinal()))));
+			script.add(new C_assert(ef.fcn(ef.symbol("<="), si, ef.numeral(Action.STAY.ordinal()))));
 		}
-
-
+		for (int[] obs : observations[1]) {
+			ISymbol si = ef.symbol("s"+ obsMap.get(Arrays.toString(obs)));
+			script.add(new org.smtlib.command.C_declare_fun(
+					si,
+					Collections.emptyList(),
+					ints								
+					));
+			script.add(new C_assert(ef.fcn(ef.symbol(">="), si, ef.numeral(Action.STAY.ordinal()))));
+			script.add(new C_assert(ef.fcn(ef.symbol("<="), si, ef.numeral(Action.RIGHT.ordinal()))));
+		}
 		SMTUtils.execAndCheckResult(script, solver);
 	}
 
@@ -72,7 +73,7 @@ public class SMTSolver {
 		if ("unsat".equals(response)) {
 			throw new NoStrategyExistsException();
 		} else if ("sat".equals(response)) {
-			int [] strat = new int [nbVar];
+			int [] strat = fixedStrat.clone();
 			IResponse r = new C_get_model().execute(solver);			
 			if (r instanceof ISeq) {
 				ISeq seq = (ISeq) r;
@@ -98,26 +99,21 @@ public class SMTSolver {
 		}
 	}
 
-	public void setRigidStrategy(Map<int[], Action> rigid, Map<String, Integer> obsMap) {
-		IFactory ef = smt.smtConfig.exprFactory;
-		Script script = new Script();
-
+	public void setRigidStrategy(Map<String, Action> rigid, Map<String, Integer> obsMap) {
+		fixedStrat = new int[obsMap.size()];
+		
 		// Iterate through each observation-action pair in the rigid map
-		for (Map.Entry<int[], Action> entry : rigid.entrySet()) {
-			int[] observation = entry.getKey();
+		for (Entry<String, Action> entry : rigid.entrySet()) {
+			String obsStr = entry.getKey();
 			Action action = entry.getValue();
 
-			// Convert observation to string representation and fetch the corresponding index
-			String obsStr = Arrays.toString(observation);
 			Integer index = obsMap.get(obsStr);
 			if (index != null) {
 				// Add a constraint for the given observation to enforce the action in the rigid strategy
-				script.add(new C_assert(ef.fcn(ef.symbol("="), ef.symbol("s" + index), ef.numeral(action.ordinal()))));
+				fixedStrat[index] = action.ordinal();
 			}
 		}
 
-		// Execute the script and check the result
-		SMTUtils.execAndCheckResult(script, solver);
 	}
 
 
