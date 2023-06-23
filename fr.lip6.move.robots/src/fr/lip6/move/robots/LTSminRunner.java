@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
-import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import fr.lip6.move.gal.ltsmin.BinaryToolsPlugin;
@@ -14,15 +13,12 @@ import fr.lip6.move.gal.process.Runner;
 
 public class LTSminRunner {
 
-	private static final int DEBUG = 2;
+	private static final int DEBUG = 0;
 	private boolean doPOR;
 	private File workFolder;
 	private long timeout;
-	private List<int[]>[] obs;
-	private int[] strategy;
 
-	public LTSminRunner(List<int[]>[] observations, boolean doPOR, long timeout, File work) {
-		this.obs = observations;
+	public LTSminRunner(boolean doPOR, long timeout, File work) {
 		this.doPOR = doPOR;
 		this.workFolder = work;
 		this.timeout = timeout;
@@ -30,14 +26,13 @@ public class LTSminRunner {
 
 
 	public String solve(int [] strategy) {
-		
-		
 		try {
 			
 			try {
 				createStratFiles(strategy);
 				compileStrat(10);
-				System.out.println("Built C files in : \n" + new File(workFolder + "/"));
+				if (DEBUG >= 1)
+					System.out.println("Built C files in : \n" + new File(workFolder + "/"));
 
 //				compilePINS((int)Math.max(2, timeout/5));
 				linkPINS(Math.max(1, timeout/5));
@@ -112,7 +107,9 @@ public class LTSminRunner {
 			File outputff = Files.createTempFile("ltsrun", ".out").toFile();
 			outputff.deleteOnExit();
 			long time = System.currentTimeMillis();
-			System.out.println("Running LTSmin : " + ltsmin);
+			if (DEBUG >= 1) {
+				System.out.println("Running LTSmin : " + ltsmin);
+			}
 			int status = Runner.runTool(timeout, ltsmin, outputff, true);
 			if (status == 137) {
 				System.err.println("LTSmin failed to check property "+ pname + " due to out of memory issue (code 137).");
@@ -122,8 +119,10 @@ public class LTSminRunner {
 				Files.lines(outputff.toPath()).forEach(l -> System.err.println(l));
 				throw new RuntimeException("Unexpected exception when executing ltsmin :" + ltsmin + "\n" + status);				
 			}
-			System.out.println("LTSmin run took "+ (System.currentTimeMillis() -time) +" ms.");
-			System.out.flush();
+			if (DEBUG >= 1) {
+				System.out.println("LTSmin run took "+ (System.currentTimeMillis() -time) +" ms.");
+				System.out.flush();
+			}
 			boolean result;
 
 			if (Files.lines(outputff.toPath()).anyMatch(output -> output.contains("Error: tree leafs table full! Change -s/--ratio"))) {
@@ -164,7 +163,9 @@ public class LTSminRunner {
 		clgcc.addArg("-O2");
 		clgcc.addArg("model.c");
 
-		System.out.println("Running compilation step : " + clgcc);
+		if (DEBUG >= 1) {
+			System.out.println("Running compilation step : " + clgcc);
+		}
 		File outputff = Files.createTempFile("gccrun", ".out").toFile();
 		outputff.deleteOnExit();
 		new File(workFolder+"/model.o").deleteOnExit();
@@ -173,8 +174,10 @@ public class LTSminRunner {
 			Files.lines(outputff.toPath()).forEach(l -> System.err.println(l));
 			throw new RuntimeException("Could not compile executable ." + clgcc);
 		}
-		System.out.println("Compilation finished in "+ (System.currentTimeMillis() -time) +" ms.");
-		System.out.flush();
+		if (DEBUG >= 1) {
+			System.out.println("Compilation finished in "+ (System.currentTimeMillis() -time) +" ms.");
+			System.out.flush();
+		}
 	}
 	
 	private void compileStrat(int timeout) throws IOException, TimeoutException, InterruptedException {
@@ -193,7 +196,9 @@ public class LTSminRunner {
 		clgcc.addArg("-O2");
 		clgcc.addArg("strat.c");
 
-		System.out.println("Running compilation step : " + clgcc);
+		if (DEBUG >= 1) {
+			System.out.println("Running compilation step : " + clgcc);
+		}
 		File outputff = Files.createTempFile("gccrun", ".out").toFile();
 		outputff.deleteOnExit();
 		new File(workFolder+"/strat.o").deleteOnExit();
@@ -202,8 +207,10 @@ public class LTSminRunner {
 			Files.lines(outputff.toPath()).forEach(l -> System.err.println(l));
 			throw new RuntimeException("Could not compile executable ." + clgcc);
 		}
-		System.out.println("Compilation finished in "+ (System.currentTimeMillis() -time) +" ms.");
-		System.out.flush();
+		if (DEBUG >= 1) {
+			System.out.println("Compilation finished in "+ (System.currentTimeMillis() -time) +" ms.");
+			System.out.flush();
+		}
 	}
 
 	
@@ -219,7 +226,7 @@ public class LTSminRunner {
 		clgcc.addArg("gal.so");
 		clgcc.addArg("model.o");
 		clgcc.addArg("strat.o");
-		System.out.println("Running link step : " + clgcc);
+		if (DEBUG >= 1) System.out.println("Running link step : " + clgcc);
 		File outputff = Files.createTempFile("linkrun", ".out").toFile();
 		outputff.deleteOnExit();
 		new File(workFolder+"/gal.so").deleteOnExit();
@@ -228,13 +235,12 @@ public class LTSminRunner {
 			Files.lines(outputff.toPath()).forEach(l -> System.err.println(l));
 			throw new RuntimeException("Could not link executable ." + clgcc);
 		}
-		System.out.println("Link finished in "+ (System.currentTimeMillis() -time) +" ms.");
-		System.out.flush();
+		if (DEBUG >= 1) {
+			System.out.println("Link finished in "+ (System.currentTimeMillis() -time) +" ms.");
+			System.out.flush();
+		}
 	}
 
-	public void setStrategy(int [] strategy) {
-		this.strategy = strategy;
-	}
 
 
 	public void initialize() {
