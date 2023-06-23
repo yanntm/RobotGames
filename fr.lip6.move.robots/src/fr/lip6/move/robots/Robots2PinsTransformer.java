@@ -23,10 +23,11 @@ import fr.lip6.move.gal.util.IntMatrixCol;
 
 public class Robots2PinsTransformer {
 
-	private static final int DEBUG = 0;
+	private static final int DEBUG = 2;
 	private int nbRobots;
 	private int nbPos;
 	private boolean hasPartialOrder=false;
+	private boolean useSymmetries;
 	
 	
 	private void buildBodyFile(String path) throws IOException {
@@ -41,8 +42,8 @@ public class Robots2PinsTransformer {
 			pw.println("#include <ltsmin/lts-type.h>");
 			pw.println("#include \"model.h\"");
 			pw.println("#define true 1");
-			pw.println("#define false 0");
-
+			pw.println("#define false 0\n"
+			+ "#define nbPos "+nbPos);
 			pw.println("int initial [" + (6*nbPos + 5*nbPos) + "] ;");
 
 			pw.println("int* get_initial_state() {");
@@ -274,6 +275,8 @@ public class Robots2PinsTransformer {
 
 		List<int[]> rm = new ArrayList<>();
 		List<int[]> wm = new ArrayList<>();
+		
+		if (! useSymmetries) {
 		for (int tindex = 0, te = (5*nbPos); tindex < te; tindex++) {
 			int pos = tindex / 5;
 			Action a = Action.values()[tindex%5];
@@ -395,6 +398,18 @@ public class Robots2PinsTransformer {
 			wm.add(w);
 
 		}
+		} else {
+			// with symmetries : everyone depends on everything
+			SparseIntArray reads = new SparseIntArray();
+			for (int var=0; var < 11*nbPos ; var++) {
+				reads.append(var, 1);
+			}
+			int [] r = convertToLine(reads);
+			for (int tindex = 0, te = (5*nbPos); tindex < te; tindex++) {
+				rm.add(r);
+				wm.add(r);
+			}
+		}
 
 		printMatrix(pw, "rm", rm);
 		pw.print("int* read_matrix(int row) {\n" + "  return rm[row];\n" + "}\n");
@@ -481,8 +496,10 @@ public class Robots2PinsTransformer {
 		for (int tindex = 0; tindex < (5*nbPos); tindex++) {
 			pw.println("  pins_chunk_put(m, action_type, chunk_str(\"tr" + (tindex/5) +"_" + Action.values()[tindex%5] + "\"));");
 		}
-		// sched
-		pw.println("  pins_chunk_put(m, action_type, chunk_str(\"reschedule\"));");
+		if (! useSymmetries) {
+			// sched
+			pw.println("  pins_chunk_put(m, action_type, chunk_str(\"reschedule\"));");
+		}
 		
 
 		// pw.println(" GBchunkPut(m, bool_type, chunk_str(LTSMIN_VALUE_BOOL_FALSE));");
@@ -635,7 +652,11 @@ public class Robots2PinsTransformer {
 		pw.println("};");
 		*/
 		pw.println("int group_count() {");
-		pw.println("  return " + (5*nbPos +1) + " ;");
+		int count = 5*nbPos;
+		if (! useSymmetries) {
+			count += 1; // the reschedule transition
+		}
+		pw.println("  return " + count + " ;");
 		pw.println("}");
 
 		pw.println("int label_count() {");
@@ -858,9 +879,113 @@ public class Robots2PinsTransformer {
 				+ "printf(\"Fatal error no observation for %s \\n\",bb); return -1;} \n}\n");
 		
 		
-		// perfect hash
+		// the strat
 		pw.println("extern int strat(int);");
-
+		
+		// canonization
+		if (useSymmetries) {
+			pw.println("\n"					
+					+ "\n"
+					+ "long value (int * state, int pos) {\n"
+					+ "  // basically : 10 counters we merge to a single one.\n"
+					+ "  long res = 1;\n"
+					+ "  for (int i=0; i<5 ;i++) {\n"
+					+ "    res = 31*res + state[pos*6+i] + 1;\n"
+					+ "    res = 31*res + state[nbPos*6+ pos*5 +i] + 1;\n"
+					+ "  }\n"
+					+ "  return res;\n"
+					+ "}\n"
+					+ "\n"
+					+ "\n"
+					+ "void canonize (int * state) {\n"
+					+ " int maxPosition=-1;\n"
+					+ " int maxDirection=-1;\n"
+					+ " int candidates [nbPos];\n"
+					+ " int nbCand = 0;\n"
+					+ " int nbSched = 0;\n int wasSched=0;"					
+					+ " for (int i=0;i< 5* nbPos;i++) {"
+					+ "   nbSched += state[6*nbPos+i];"
+					+ " }\n"
+					+ " if (nbSched == "+nbRobots+") {"
+					+ "   memset(state+6*nbPos,0,5*nbPos*sizeof(int)); wasSched=1;"
+					+ " }\n"
+					+ "\n"
+					+ " long maxVal = value(state, 0);\n"
+					+ " candidates[nbCand++]=0;\n"
+					+ " for (int i=1, ie=nbPos ; i < ie ; i++) {\n"
+					+ "   long val = value(state,i);\n"
+					+ "   if (val > maxVal) {\n"
+					+ "     nbCand=0;\n"
+					+ "     candidates[nbCand++]=i;\n"
+					+ "   } else if (val == maxVal) {\n"
+					+ "     candidates[nbCand++]=i;\n"
+					+ "   }\n"
+					+ " }\n"
+					+ " struct Candidate {\n"
+					+ "   int pos;\n"
+					+ "   int dir;\n"
+					+ " };\n"
+					+ " struct Candidate candDir [2*nbPos]; \n"
+					+ " for (int i=0;i<nbCand;i++) {\n"
+					+ "   candDir[2*i].pos=candidates[i];\n"
+					+ "   candDir[2*i].dir=1;\n"
+					+ "   candDir[2*i+1].pos=candidates[i];\n"
+					+ "   candDir[2*i+1].dir=-1;\n"
+					+ " }\n"
+					+ " int nbCandDir = nbCand*2;\n"
+					+ "\n"
+					+ " struct Candidate nextCandDir [2*nbPos];\n"
+					+ " int nbNext=0;\n"
+					+ "\n"
+					+ " for (int d=1; d < nbPos-1 ; d++) {\n"
+					+ "   long maxVal = value(state,(candDir[0].pos + candDir[0].dir * d + nbPos)%nbPos);\n"
+					+ "   nextCandDir[nbNext++]=candDir[0];\n"
+					+ "   for (int i=1; i < nbCandDir ; i++) {\n"
+					+ "     int pos = candDir[i].pos + candDir[i].dir * d;\n"
+					+ "     long val = value(state,pos);\n"
+					+ "     if (val > maxVal) {\n"
+					+ "       nbNext=0;\n"
+					+ "       nextCandDir[nbNext++]=candDir[i];\n"
+					+ "       maxVal = val;\n"
+					+ "     } else if (val == maxVal) {\n"
+					+ "       nextCandDir[nbNext++]=candDir[i]; \n"
+					+ "     }\n"
+					+ "   }\n"
+					+ "   memcpy(candDir,nextCandDir,sizeof(candDir));\n"
+					+ "   nbCandDir = nbNext;\n"
+					+ "   nbNext=0;\n"
+					+ "   if (nbCandDir==1) {\n"
+					+ "     break;\n"
+					+ "   }\n"
+					+ " }\n"
+					+ " if (!wasSched && candDir[0].pos==0 && candDir[0].dir==1) return;\n"
+					+ "\n"
+					+ " int tmp[11*nbPos];\n"
+					+ "\n"
+					+ " for (int i=0, ie = nbPos; i < ie ; i++) {\n"
+					+ "   int cur = ( candDir[0].pos + candDir[0].dir * i + nbPos ) % nbPos;\n"
+					+ "   memcpy(tmp + i*6, state + cur*6, 6*sizeof(int));\n"
+					+ "   memcpy(tmp + nbPos*6 + i*5, state + nbPos*6 + cur*5, 5*sizeof(int));\n"					
+					+ " }\n"
+					+ " if (candDir[0].dir <0) { for (int i=0;i<nbPos;i++) {"
+					+ "   int tt = tmp[i*6+"+Action.LEFT.ordinal()+ "];"
+					+ "   tmp[i*6+"+Action.LEFT.ordinal()+ "] = tmp[i*6+"+Action.RIGHT.ordinal()+"];"
+					+ "   tmp[i*6+"+Action.RIGHT.ordinal()+"] = tt;"
+					+ "   tt = tmp[nbPos*6 + i*5+"+Action.LEFT.ordinal()+ "];"
+					+ "   tmp[nbPos*6 + i*5+"+Action.LEFT.ordinal()+ "] = tmp[nbPos*6 + i*5+"+Action.RIGHT.ordinal()+"];"
+					+ "   tmp[nbPos*6 + i*5+"+Action.RIGHT.ordinal()+"] = tt;"
+					+ "}}\n"
+					+ "	\n"
+					);
+			pw.println("int * src = state;");
+			printTrace(pw, "tmp", "CANO", "");
+			pw.println(
+					" memcpy(state, tmp, 11*nbPos*sizeof(int));\n"
+					+ "\n"
+					+ "}\n"
+					+ "");
+			
+		}
 	}
 
 
@@ -910,7 +1035,7 @@ public class Robots2PinsTransformer {
 					pw.println("  if (src["+ (nbPos*6 + pos*5 + Action.LOOK.ordinal()) +"] == src["+(pos*6+ Action.LOOK.ordinal())+"])"
 							+ "  { cur.state["+ (nbPos*6 + pos*5 + Action.LOOK.ordinal()) +"] --; }");
 					
-					
+					if (useSymmetries) pw.println("  canonize(cur.state);");
 					pw.println("       nbsucc++; ");
 					traceTransitions(pw, pos, a, "cur", "");
 					pw.println("       callback(arg, &transition_info, cur.state, wm[group]);");
@@ -934,7 +1059,7 @@ public class Robots2PinsTransformer {
 					pw.println("  if (src["+ (nbPos*6 + pos*5 + Action.LEFT.ordinal()) +"] == src["+(pos*6+ Action.LEFT.ordinal())+"])"
 							+ "  { cur.state["+ (nbPos*6 + pos*5 + Action.LEFT.ordinal()) +"] --; }");
 
-					
+					if (useSymmetries) pw.println("  canonize(cur.state);");
 					pw.println("       nbsucc++; ");
 					traceTransitions(pw, pos, a, "cur", "");
 					pw.println("       callback(arg, &transition_info, cur.state, wm[group]);");
@@ -958,7 +1083,7 @@ public class Robots2PinsTransformer {
 								+ "  { cur.state["+ (nbPos*6 + pos*5 + Action.RIGHT.ordinal()) +"] --; }");
 
 						
-						
+						if (useSymmetries) pw.println("  canonize(cur.state);");
 						pw.println("       nbsucc++; ");
 						traceTransitions(pw, pos, a, "cur", "");
 						pw.println("       callback(arg, &transition_info, cur.state, wm[group]);");
@@ -979,7 +1104,7 @@ public class Robots2PinsTransformer {
 								+ "  { cur.state["+ (nbPos*6 + pos*5 + Action.STAY.ordinal()) +"] --; }");
 
 						
-						
+						if (useSymmetries) pw.println("  canonize(cur.state);");
 						pw.println("       nbsucc++; ");
 						traceTransitions(pw, pos, a, "cur", "");
 						pw.println("       callback(arg, &transition_info, cur.state, wm[group]);");
@@ -1005,7 +1130,7 @@ public class Robots2PinsTransformer {
 						pw.println("  if (src["+ (nbPos*6 + pos*5 + Action.MOVE.ordinal()) +"] == src["+(pos*6+ Action.MOVE.ordinal())+"])"
 								+ "  { cur.state["+ (nbPos*6 + pos*5 + Action.MOVE.ordinal()) +"] --; }");
 
-						
+						if (useSymmetries) pw.println("  canonize(cur.state);");
 						pw.println("       nbsucc++; ");
 						traceTransitions(pw, pos, a, "cur", "");
 						pw.println("       callback(arg, &transition_info, cur.state, wm[group]);");
@@ -1028,7 +1153,7 @@ public class Robots2PinsTransformer {
 						pw.println("  if (src["+ (nbPos*6 + pos*5 + Action.MOVE.ordinal()) +"] == src["+(pos*6+ Action.MOVE.ordinal())+"])"
 								+ "  { cur2.state["+ (nbPos*6 + pos*5 + Action.MOVE.ordinal()) +"] --; }");
 
-						
+						if (useSymmetries) pw.println("  canonize(cur2.state);");
 						pw.println("       nbsucc++; ");
 						traceTransitions(pw, pos, a, "cur2", "");
 						pw.println("       callback(arg, &transition_info, cur2.state, wm[group]);");
@@ -1037,6 +1162,7 @@ public class Robots2PinsTransformer {
 					}
 				
 			}
+			if (!useSymmetries) {
 			pw.println("case "+(5*nbPos) +":   // reschedule");
 			pw.print("  if (");
 			for (int i=0;i < 5*nbPos ; i++) {
@@ -1052,10 +1178,11 @@ public class Robots2PinsTransformer {
 			}
 			
 			pw.println("       nbsucc++; ");
-			printTrace(pw, "cur", "", "[    SCHED    ]");
+			printTrace(pw, "cur.state", "", "[    SCHED    ]");
 			pw.println("       callback(arg, &transition_info, cur.state, wm[group]);");
 			pw.println("  }");
 			pw.println("  break;");
+			}
 			
 			pw.println("  default : return 0 ;");
 			pw.println("  } // end switch(group) ");
@@ -1154,7 +1281,7 @@ public class Robots2PinsTransformer {
 	    	
 	    	String tname = "[ pos=" + pos + " A=" + a + "]";
 	    	
-	    	printTrace(pw, cur, reason, tname);
+	    	printTrace(pw, cur+".state", reason, tname);
 	    
 	}
 
@@ -1168,16 +1295,28 @@ public class Robots2PinsTransformer {
 		if (reason.length() >0) {
 			pw.println("    offset += snprintf(buffer + offset, sizeof(buffer) - offset, \""+ reason +" :\");");		        
 		}
-		pw.println("  for (int i=0; i < " + (11*nbPos) + "; i++) {");
-		pw.println("    offset += snprintf(buffer + offset, sizeof(buffer) - offset, \"%d,\", src[i]);");
-		pw.println("  }");	        
+		traceState(pw,"src");
 		pw.println("  offset += snprintf(buffer + offset, sizeof(buffer) - offset, \" " + tname + " \");");
-		pw.println("  for (int i=0; i < " + (11*nbPos) + "; i++) {");
-		pw.println("    offset += snprintf(buffer + offset, sizeof(buffer) - offset, \"%d,\", " + cur + ".state[i]);");
-		pw.println("  }");
+		traceState(pw, cur);
 		pw.println("  offset += snprintf(buffer + offset, sizeof(buffer) - offset, \"\\n\");");
 		pw.println("  printf(\"%s\", buffer);");
 		pw.println("}");
+	}
+
+	public void traceState(PrintWriter pw, String cur) {
+		pw.println("  for (int i=0; i < " + (nbPos) + "; i++) {");
+		pw.println("  for (int j=0; j < 6 ; j++) {");
+		pw.println("    offset += snprintf(buffer + offset, sizeof(buffer) - offset, \"%d,\", " + cur + "[i*6+j]);");
+		pw.println("  }");
+		pw.println("    offset += snprintf(buffer + offset, sizeof(buffer) - offset, \" | \");");
+		pw.println("  }");
+		pw.println("    offset += snprintf(buffer + offset, sizeof(buffer) - offset, \" :: \");");
+		pw.println("  for (int i=0; i < " + (nbPos) + "; i++) {");
+		pw.println("  for (int j=0; j < 5 ; j++) {");
+		pw.println("    offset += snprintf(buffer + offset, sizeof(buffer) - offset, \"%d,\", " + cur + "[nbPos*6 + i*5 +j]);");
+		pw.println("  }");
+		pw.println("    offset += snprintf(buffer + offset, sizeof(buffer) - offset, \" | \");");
+		pw.println("  }");		
 	}
 
 
@@ -1211,10 +1350,11 @@ public class Robots2PinsTransformer {
 	private boolean forSpot;
 	private List<AtomicProp> invAtoms = new ArrayList<>();
 	
-	public void transform(String cwd, boolean withPorMatrix, boolean forSpot, int nbPos, int nbRobots, List<AtomicProp> listAtoms) {
+	public void transform(String cwd, boolean withPorMatrix, boolean forSpot, int nbPos, int nbRobots, List<AtomicProp> listAtoms, boolean useSymmetries) {
 		this.nbPos = nbPos;
 		this.nbRobots = nbRobots;
 		this.forSpot = forSpot;
+		this.useSymmetries = useSymmetries;
 		//		if ( spec.getMain() instanceof GALTypeDeclaration ) {
 		//			Logger.getLogger("fr.lip6.move.gal").fine("detecting pure GAL");
 		//		} else {
