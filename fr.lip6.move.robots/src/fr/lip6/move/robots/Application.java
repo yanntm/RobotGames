@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.eclipse.equinox.app.IApplication;
@@ -27,8 +28,8 @@ public class Application implements IApplication {
 
 		int timeout = 3600;
 		long time = System.currentTimeMillis();
-		int nbRobot=6;
-		int nbPos=7;
+		int nbRobot=3;
+		int nbPos=5;
 		
 		for (int i=0; i < args.length ; i++) {
 			if (NB_ROBOT.equals(args[i])) {
@@ -58,6 +59,9 @@ public class Application implements IApplication {
 		System.out.println("After filtering, found "+rigid.size()+" observations.");
 		printSizes(redObservations);
 		
+		for (Entry<int[], Action> ent : rigid.entrySet()) {
+			System.out.println(Arrays.toString(ent.getKey()) +"->" + ent.getValue());
+		}
 		
 		int nbIter=0;
 		
@@ -119,21 +123,15 @@ public class Application implements IApplication {
 	}
 
 	public void printSizes(List<int[]>[] observations) {
-		BigInteger symSize = BigInteger.valueOf(observations[0].size());
-		BigInteger asymSize = BigInteger.valueOf(observations[1].size());
+		int symSize = observations[0].size();
+		int asymSize = observations[1].size();
+		BigInteger result = BigInteger.valueOf(2).pow(symSize)
+				.multiply(BigInteger.valueOf(3).pow(asymSize));
 
 		
 		System.out.println("Total number of observation : symmetric :" + symSize + " asymmetric :"
-		        + asymSize + " total :" + symSize.add(asymSize));
-
-		BigInteger result;
-		if (observations[0].size() == 0) {
-			result = symSize.pow(2);
-		} else if (observations[1].size() == 0) {
-			result = asymSize.pow(3);
-		} else {
-			result = symSize.pow(2).multiply(asymSize.pow(3));
-		}
+		        + asymSize + " total :" + (symSize+asymSize));
+	
 
 		System.out.println("Estimated size of strategy search space : " + result);
 	}
