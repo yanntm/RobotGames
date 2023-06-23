@@ -39,18 +39,26 @@ public class Application implements IApplication {
 			} 
 		}
 		boolean rigidFilter = false;
+		boolean enlarge = false;
+		boolean useSymmetries = true;
 		
 		System.out.println("Running strategy search for K="+nbRobot +" on a ring of N="+nbPos +" positions.");
+		
+		Statistics stats = new Statistics();
+		
 		List<int[]>[] observations = ObservationGenerator.generateSplitObservations(nbPos, nbRobot);
 		printSizes(observations);
 		// use gperf to index our observations
 		
 		Map<String, Integer> obsMap = new HashMap<>();
+		Map<Integer, String> indexMap = new HashMap<>();
 	    {
 	        int index = 0;
 	        for (List<int[]> elem : observations) {
 	            for (int [] obs : elem) {
-	                obsMap.put(Arrays.toString(obs), index++);
+	            	String key = Arrays.toString(obs);
+	            	indexMap.put(index, key);
+	                obsMap.put(key, index++);
 	            }
 	        }
 	    }
@@ -59,7 +67,7 @@ public class Application implements IApplication {
 		List<int[]>[] redObservations = null;
 		if (rigidFilter) {
 			redObservations = ObservationGenerator.filterRigidObservations(observations, rigid );
-			System.out.println("After filtering, found "+rigid.size()+" observations.");
+			System.out.println("After filtering, fixed strategy for "+rigid.size()+" observations.");
 			printSizes(redObservations);
 			System.out.println("Starting from following 'single multiplicity' strategy'");
 			for (Entry<String, Action> ent : rigid.entrySet()) {
@@ -79,26 +87,31 @@ public class Application implements IApplication {
 			
 			
 			Robots2PinsTransformer r2t = new Robots2PinsTransformer();
-			r2t.transform(workFolder.getCanonicalPath(), false, false, nbPos, nbRobot, null);
+			r2t.transform(workFolder.getCanonicalPath(), false, false, nbPos, nbRobot, null, useSymmetries);
 
 			// setup SMT solver
-			SMTSolver solver = new SMTSolver();		
+			SMTSolver solver = new SMTSolver(stats, enlarge);		
 			if (rigidFilter) {
-				solver.declareVariables(redObservations, obsMap);
+				solver.declareVariables(redObservations, obsMap,observations[0].size());
 			} else {
-				solver.declareVariables(observations, obsMap);
+				solver.declareVariables(observations, obsMap,observations[0].size());
 			}
 			solver.setRigidStrategy(rigid, obsMap);
+
+			
+
 			
 			try {
 			
 			int[] strategy = solver.readStrategy();
 
-			LTSminRunner runner = new LTSminRunner(false, 100, workFolder);
+			LTSminRunner runner = new LTSminRunner(false, 100, workFolder, stats);
 			runner.initialize();
 			
+			stats.reportTime(Tool.setup, System.currentTimeMillis()-time);
+			
 			while (true) {
-				System.out.println("Running iteration "+(nbIter++)+" with a new strategy.");
+				System.out.println("Running iteration "+(nbIter++)+" with a new strategy. Remains "+rigid.size() + " pre asigned elements in strategy.");
 				String res = runner.solve(strategy);
 				if ("TRUE".equals(res)) {
 					System.out.println("Found a winning strategy after "+nbIter+ " iterations in "+(System.currentTimeMillis() - time)+" ms.");
@@ -106,8 +119,12 @@ public class Application implements IApplication {
 					break;
 				} else {
 					
-					Set<Integer> used = TraceAnalyzer.extractTrace(workFolder, nbPos, obsMap, rigid);					
-					
+					Set<Integer> used = TraceAnalyzer.extractTrace(workFolder, nbPos, obsMap, rigid, stats, enlarge);					
+					if (enlarge && rigidFilter && !rigid.isEmpty()) {
+						for (Integer us : used) {
+							rigid.remove(indexMap.get(us));
+						}
+					}
 					solver.addConstraint(used, strategy);
 					strategy = solver.readStrategy();
 				}
@@ -125,7 +142,7 @@ public class Application implements IApplication {
 		}
 
 		
-		
+		stats.print();
 		
 		return IApplication.EXIT_OK;
 	}
