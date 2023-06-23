@@ -28,7 +28,7 @@ public class Application implements IApplication {
 
 		int timeout = 3600;
 		long time = System.currentTimeMillis();
-		int nbRobot=3;
+		int nbRobot=4;
 		int nbPos=5;
 		
 		for (int i=0; i < args.length ; i++) {
@@ -54,13 +54,14 @@ public class Application implements IApplication {
 	    }
 	    int totalObs = observations[0].size() + observations[1].size();
 		
-		Map<int[], Action> rigid = new HashMap<>();
+		Map<String, Action> rigid = new HashMap<>();
 		List<int[]>[] redObservations = ObservationGenerator.filterRigidObservations(observations, rigid );
 		System.out.println("After filtering, found "+rigid.size()+" observations.");
 		printSizes(redObservations);
 		
-		for (Entry<int[], Action> ent : rigid.entrySet()) {
-			System.out.println(Arrays.toString(ent.getKey()) +"->" + ent.getValue());
+		System.out.println("Starting from following 'single multiplicity' strategy'");
+		for (Entry<String, Action> ent : rigid.entrySet()) {
+			System.out.println(ent.getKey() +"->" + ent.getValue());
 		}
 		
 		int nbIter=0;
@@ -78,7 +79,7 @@ public class Application implements IApplication {
 
 			// setup SMT solver
 			SMTSolver solver = new SMTSolver();		
-			solver.declareVariables(observations);
+			solver.declareVariables(redObservations, obsMap);
 			solver.setRigidStrategy(rigid, obsMap);
 			
 			try {
@@ -97,8 +98,7 @@ public class Application implements IApplication {
 					break;
 				} else {
 					
-					Set<Integer> used = TraceAnalyzer.extractTrace(workFolder, nbPos, obsMap);
-					System.out.println("Found a counter example involving "+used.size()+"/" + totalObs +" observations ");
+					Set<Integer> used = TraceAnalyzer.extractTrace(workFolder, nbPos, obsMap, rigid);					
 					
 					solver.addConstraint(used, strategy);
 					strategy = solver.readStrategy();
