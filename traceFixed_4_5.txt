@@ -1,0 +1,97 @@
+Running strategy search for K=4 on a ring of N=5 positions.
+Total number of observation : symmetric :3 asymmetric :16 total :19
+Estimated size of strategy search space : 344373768
+After filtering, fixed strategy for 15 observations.
+Total number of observation : symmetric :0 asymmetric :4 total :4
+Estimated size of strategy search space : 81
+Starting from following 'single multiplicity' strategy'
+[2, 0, 1, 1, 0]->STAY
+[2, 1, 0, 1, 0]->STAY
+[1, 1, 2, 0, 0]->STAY
+[1, 2, 0, 0, 1]->RIGHT
+[1, 2, 1, 0, 0]->RIGHT
+[1, 0, 2, 1, 0]->RIGHT
+[1, 3, 0, 0, 0]->RIGHT
+[1, 1, 0, 2, 0]->LEFT
+[3, 0, 1, 0, 0]->STAY
+[4, 0, 0, 0, 0]->STAY
+[1, 0, 3, 0, 0]->RIGHT
+[2, 1, 0, 0, 1]->STAY
+[2, 1, 1, 0, 0]->STAY
+[1, 2, 0, 1, 0]->RIGHT
+[3, 1, 0, 0, 0]->STAY
+Building all files in /tmp/gperf14328853325769131076
+Running gperf : 'gperf' '-C' '-t' '-L ANSI-C' '-N in_word_set' '-H hash_function' '--output-file=/tmp/gperf14328853325769131076/observations.h' '/tmp/gperf14328853325769131076/obs.txt' 
+gperf run took 12 ms.
+Jun 23, 2023 2:39:58 PM fr.lip6.move.robots.Robots2PinsTransformer transform
+INFO: Built C files in 8ms conformant to PINS (ltsmin variant)in folder :/tmp/gperf14328853325769131076
+Running iteration 0 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 19 steps of which 10 uses of the strategy (0 fixed), building constraint involving 2 observations.
+Running iteration 1 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 16 steps of which 8 uses of the strategy (0 fixed), building constraint involving 2 observations.
+Running iteration 2 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 66 steps of which 32 uses of the strategy (4 fixed), building constraint involving 3 observations.
+Running iteration 3 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 34 steps of which 17 uses of the strategy (1 fixed), building constraint involving 3 observations.
+Running iteration 4 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 120 steps of which 58 uses of the strategy (11 fixed), building constraint involving 4 observations.
+Running iteration 5 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 76 steps of which 37 uses of the strategy (4 fixed), building constraint involving 4 observations.
+Running iteration 6 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 52 steps of which 26 uses of the strategy (11 fixed), building constraint involving 3 observations.
+Running iteration 7 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 72 steps of which 35 uses of the strategy (10 fixed), building constraint involving 3 observations.
+Running iteration 8 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 126 steps of which 61 uses of the strategy (11 fixed), building constraint involving 4 observations.
+Running iteration 9 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 26 steps of which 14 uses of the strategy (5 fixed), building constraint involving 2 observations.
+Running iteration 10 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 57 steps of which 29 uses of the strategy (2 fixed), building constraint involving 4 observations.
+Running iteration 11 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 58 steps of which 30 uses of the strategy (9 fixed), building constraint involving 4 observations.
+Running iteration 12 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 103 steps of which 52 uses of the strategy (10 fixed), building constraint involving 4 observations.
+Running iteration 13 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 92 steps of which 46 uses of the strategy (9 fixed), building constraint involving 4 observations.
+Running iteration 14 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 32 steps of which 17 uses of the strategy (6 fixed), building constraint involving 2 observations.
+Running iteration 15 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 133 steps of which 67 uses of the strategy (9 fixed), building constraint involving 4 observations.
+Running iteration 16 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 70 steps of which 36 uses of the strategy (2 fixed), building constraint involving 4 observations.
+Running iteration 17 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 133 steps of which 67 uses of the strategy (11 fixed), building constraint involving 4 observations.
+Running iteration 18 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 40 steps of which 21 uses of the strategy (7 fixed), building constraint involving 4 observations.
+Running iteration 19 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 25 steps of which 13 uses of the strategy (0 fixed), building constraint involving 4 observations.
+Running iteration 20 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 52 steps of which 27 uses of the strategy (8 fixed), building constraint involving 4 observations.
+Running iteration 21 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 68 steps of which 34 uses of the strategy (6 fixed), building constraint involving 4 observations.
+Running iteration 22 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 43 steps of which 22 uses of the strategy (6 fixed), building constraint involving 3 observations.
+Running iteration 23 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 91 steps of which 46 uses of the strategy (2 fixed), building constraint involving 4 observations.
+Running iteration 24 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 126 steps of which 63 uses of the strategy (2 fixed), building constraint involving 2 observations.
+Running iteration 25 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 41 steps of which 21 uses of the strategy (2 fixed), building constraint involving 3 observations.
+Running iteration 26 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 69 steps of which 36 uses of the strategy (6 fixed), building constraint involving 4 observations.
+Running iteration 27 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 42 steps of which 22 uses of the strategy (6 fixed), building constraint involving 3 observations.
+Running iteration 28 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 58 steps of which 30 uses of the strategy (7 fixed), building constraint involving 4 observations.
+Running iteration 29 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 84 steps of which 42 uses of the strategy (8 fixed), building constraint involving 4 observations.
+Running iteration 30 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 24 steps of which 13 uses of the strategy (6 fixed), building constraint involving 2 observations.
+Running iteration 31 with a new strategy. Remains 15 pre asigned elements in strategy.
+Analyzed a counter-example of 34 steps of which 17 uses of the strategy (5 fixed), building constraint involving 2 observations.
+Process concluded that no strategy exists after 32 iterations in 2731 ms.
+Tool GCC total 696 ms.
+Tool Trace total 115 ms.
+Tool LTSMin total 1547 ms.
+Tool setup total 335 ms.
+Tool SMT total 39 ms.
