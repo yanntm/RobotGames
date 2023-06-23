@@ -129,10 +129,12 @@ public class ObservationGenerator {
             return Action.STAY;  // otherwise, stay
         } else {
             // if closer or equidistant to the left, move left unless there's a robot
-            if (maxIndex >= (observation.length - 1) / 2) {
-                return observation[observation.length - 1] == 0 ? Action.LEFT : Action.STAY;
+        	int dleft = (observation.length - 1) - maxIndex;
+        	int dright = maxIndex -1;
+            if (dleft < dright) {
+                return observation.length-1 == maxIndex ||  observation[observation.length - 1] == 0 ? Action.LEFT : Action.STAY;
             } else {
-                return observation[1] == 0 ? Action.RIGHT : Action.STAY;  // otherwise, move right unless someone is adjacent in position 1
+                return maxIndex==1 || observation[1] == 0 ? Action.RIGHT : Action.STAY;  // otherwise, move right unless someone is adjacent in position 1
             }
         }
     }
