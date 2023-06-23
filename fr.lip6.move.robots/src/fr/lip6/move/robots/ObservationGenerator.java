@@ -99,4 +99,64 @@ public class ObservationGenerator {
             System.out.println();
         }
     }
+    
+    public static Action decideAction(int[] observation, boolean isSymmetric) {
+        int max = Integer.MIN_VALUE;
+        int maxIndex = -1;
+        int maxCount = 0;
+
+        for (int i = 0; i < observation.length; i++) {
+            if (observation[i] > max) {
+                max = observation[i];
+                maxIndex = i;
+                maxCount = 1;
+            } else if (observation[i] == max) {
+                maxCount++;
+            }
+        }
+
+        if (maxCount > 1) {
+            return Action.TOTAL;  // not rigid
+        }
+
+        // Assign actions based on the rules
+        if (maxIndex == 0) {
+            return Action.STAY;  // on the max, stay
+        } else if (isSymmetric) {
+            if (observation[1] == 0 && observation[observation.length - 1] == 0) {
+                return Action.MOVE;  // both cells are empty, move
+            }
+            return Action.STAY;  // otherwise, stay
+        } else {
+            // if closer or equidistant to the left, move left unless there's a robot
+            if (maxIndex >= (observation.length - 1) / 2) {
+                return observation[observation.length - 1] == 0 ? Action.LEFT : Action.STAY;
+            } else {
+                return observation[1] == 0 ? Action.RIGHT : Action.STAY;  // otherwise, move right unless someone is adjacent in position 1
+            }
+        }
+    }
+
+    
+    public static List<int[]>[] filterRigidObservations(List<int[]>[] observations, Map<int[], Action> rigid) {
+        @SuppressWarnings("unchecked")
+		List<int[]>[] newObservations = new ArrayList[2];
+
+        for (int i = 0; i < 2; i++) {
+            newObservations[i] = new ArrayList<>();
+            boolean isSymmetric = i == 0;
+            for (int j = 0; j < observations[i].size(); j++) {
+                int[] observation = observations[i].get(j);
+                Action action = decideAction(observation, isSymmetric);
+                if (action == Action.TOTAL) {
+                    newObservations[i].add(observation);
+                } else {
+                    rigid.put(observation, action);
+                }
+            }
+        }
+
+        return newObservations;
+    }
+
 }
