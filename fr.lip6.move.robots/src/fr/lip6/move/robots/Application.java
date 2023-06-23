@@ -38,6 +38,8 @@ public class Application implements IApplication {
 				nbPos = Integer.parseInt(args[++i]);
 			} 
 		}
+		boolean rigidFilter = false;
+		
 		System.out.println("Running strategy search for K="+nbRobot +" on a ring of N="+nbPos +" positions.");
 		List<int[]>[] observations = ObservationGenerator.generateSplitObservations(nbPos, nbRobot);
 		printSizes(observations);
@@ -52,17 +54,19 @@ public class Application implements IApplication {
 	            }
 	        }
 	    }
-	    int totalObs = observations[0].size() + observations[1].size();
-		
+	    
 		Map<String, Action> rigid = new HashMap<>();
-		List<int[]>[] redObservations = ObservationGenerator.filterRigidObservations(observations, rigid );
-		System.out.println("After filtering, found "+rigid.size()+" observations.");
-		printSizes(redObservations);
-		
-		System.out.println("Starting from following 'single multiplicity' strategy'");
-		for (Entry<String, Action> ent : rigid.entrySet()) {
-			System.out.println(ent.getKey() +"->" + ent.getValue());
+		List<int[]>[] redObservations = null;
+		if (rigidFilter) {
+			redObservations = ObservationGenerator.filterRigidObservations(observations, rigid );
+			System.out.println("After filtering, found "+rigid.size()+" observations.");
+			printSizes(redObservations);
+			System.out.println("Starting from following 'single multiplicity' strategy'");
+			for (Entry<String, Action> ent : rigid.entrySet()) {
+				System.out.println(ent.getKey() +"->" + ent.getValue());
+			}
 		}
+		
 		
 		int nbIter=0;
 		
@@ -79,7 +83,11 @@ public class Application implements IApplication {
 
 			// setup SMT solver
 			SMTSolver solver = new SMTSolver();		
-			solver.declareVariables(redObservations, obsMap);
+			if (rigidFilter) {
+				solver.declareVariables(redObservations, obsMap);
+			} else {
+				solver.declareVariables(observations, obsMap);
+			}
 			solver.setRigidStrategy(rigid, obsMap);
 			
 			try {
