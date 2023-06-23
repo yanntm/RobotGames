@@ -2,7 +2,9 @@ package fr.lip6.move.robots;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -26,7 +28,7 @@ public class Application implements IApplication {
 		int timeout = 3600;
 		long time = System.currentTimeMillis();
 		int nbRobot=4;
-		int nbPos=8;
+		int nbPos=5;
 		
 		for (int i=0; i < args.length ; i++) {
 			if (NB_ROBOT.equals(args[i])) {
@@ -37,7 +39,16 @@ public class Application implements IApplication {
 		}
 		System.out.println("Running strategy search for K="+nbRobot +" on a ring of N="+nbPos +" positions.");
 		List<int[]>[] observations = ObservationGenerator.generateSplitObservations(nbPos, nbRobot);
+		int totalObs = observations[0].size() + observations[1].size();
+		BigInteger symSize = BigInteger.valueOf(observations[0].size());
+		BigInteger asymSize = BigInteger.valueOf(observations[1].size());
 
+		BigInteger result = symSize.pow(2).multiply(asymSize.pow(3));
+
+		System.out.println("Total number of observation : symmetric :" + symSize + " asymmetric :"
+		        + asymSize + " total :" + totalObs);
+
+		System.out.println("Estimated size of strategy search space : " + result);
 		// use gperf to index our observations
 		
 		int nbIter=0;
@@ -45,6 +56,7 @@ public class Application implements IApplication {
 		try {
 			File workFolder = Files.createTempDirectory("gperf").toFile();
 			if (DEBUG < 2) workFolder.deleteOnExit();
+			System.out.println("Building all files in "+ workFolder.getCanonicalPath());
 			
 			GperfRunner.runGperf(observations, workFolder.getCanonicalPath());
 			
@@ -69,7 +81,7 @@ public class Application implements IApplication {
 			
 			int[] strategy = solver.readStrategy();
 
-			LTSminRunner runner = new LTSminRunner(observations, false, 100, workFolder);
+			LTSminRunner runner = new LTSminRunner(false, 100, workFolder);
 			runner.initialize();
 			
 			while (true) {
@@ -81,11 +93,11 @@ public class Application implements IApplication {
 					break;
 				} else {
 					
-					System.out.println("Found a counter example.");
 					Set<Integer> used = TraceAnalyzer.extractTrace(workFolder, nbPos, obsMap);
+					System.out.println("Found a counter example involving "+used.size()+"/" + totalObs +" observations ");
 					
 					solver.addConstraint(used, strategy);
-					strategy = solver.readStrategy();					
+					strategy = solver.readStrategy();
 				}
 			}
 			
