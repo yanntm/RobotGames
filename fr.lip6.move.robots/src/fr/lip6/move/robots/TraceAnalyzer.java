@@ -16,6 +16,8 @@ import fr.lip6.move.gal.process.Runner;
 
 public class TraceAnalyzer {
 
+	private static final int DEBUG = 0;
+
 	public static Set<Integer> extractTrace(File workingDir, int nbPos, Map<String, Integer> obsMap) {
 		CommandLine ltsmin = new CommandLine();
 		ltsmin.setWorkingDir(workingDir);
@@ -27,7 +29,9 @@ public class TraceAnalyzer {
 			File outputff = Files.createTempFile("ltsrun", ".out").toFile();
 			outputff.deleteOnExit();
 			long time = System.currentTimeMillis();
-			System.out.println("Running LTSmin : " + ltsmin);
+			if (DEBUG >= 1) {
+				System.out.println("Running LTSmin : " + ltsmin);
+			}
 			int status = Runner.runTool(timeout, ltsmin, outputff, true);
 			if (status == 137) {
 				System.err.println("LTSmin failed to build CSV of trace due to out of memory issue (code 137).");
@@ -37,9 +41,10 @@ public class TraceAnalyzer {
 				Files.lines(outputff.toPath()).forEach(l -> System.err.println(l));
 				throw new RuntimeException("Unexpected exception when executing ltsmin :" + ltsmin + "\n" + status);				
 			}
-			System.out.println("LTSmin run took "+ (System.currentTimeMillis() -time) +" ms.");
-			System.out.flush();
-
+			if (DEBUG >= 1) {
+				System.out.println("LTSmin run took "+ (System.currentTimeMillis() -time) +" ms.");
+				System.out.flush();
+			}
 			final Set<Integer> result = new HashSet<>();
 
 			try (BufferedReader br = new BufferedReader(new FileReader(workingDir.getCanonicalPath()+"/trace.csv"))) {
