@@ -1,8 +1,10 @@
 package fr.lip6.move.robots;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.smtlib.IResponse;
@@ -54,14 +56,14 @@ public class SMTSolver {
 
 	public void addConstraint(Set<Integer> trace, int [] strat) {
 		IFactory ef = smt.smtConfig.exprFactory;
-		
+
 		List<IExpr> expr = new ArrayList<>();
 		for (Integer obs : trace) {
 			expr.add(ef.fcn(ef.symbol("not"),ef.fcn(ef.symbol("="), ef.symbol("s"+obs), ef.numeral(strat[obs]))));
 		}
 		Script s = new Script();
 		s.add(new C_assert(SMTUtils.makeOr(expr)));
-		
+
 		SMTUtils.execAndCheckResult(s, solver);
 	}
 
@@ -94,6 +96,28 @@ public class SMTSolver {
 			System.err.println("Failed to check sat, obtained " + response);
 			return null;
 		}
+	}
+
+	public void setRigidStrategy(Map<int[], Action> rigid, Map<String, Integer> obsMap) {
+		IFactory ef = smt.smtConfig.exprFactory;
+		Script script = new Script();
+
+		// Iterate through each observation-action pair in the rigid map
+		for (Map.Entry<int[], Action> entry : rigid.entrySet()) {
+			int[] observation = entry.getKey();
+			Action action = entry.getValue();
+
+			// Convert observation to string representation and fetch the corresponding index
+			String obsStr = Arrays.toString(observation);
+			Integer index = obsMap.get(obsStr);
+			if (index != null) {
+				// Add a constraint for the given observation to enforce the action in the rigid strategy
+				script.add(new C_assert(ef.fcn(ef.symbol("="), ef.symbol("s" + index), ef.numeral(action.ordinal()))));
+			}
+		}
+
+		// Execute the script and check the result
+		SMTUtils.execAndCheckResult(script, solver);
 	}
 
 
