@@ -21,7 +21,7 @@ import fr.lip6.move.gal.structural.smt.SMTUtils;
 
 public class SMTSolver {
 	private org.smtlib.SMT smt = new SMT();
-	private ISolver solver = SMTUtils.initSolver(smt,"QF_LIA",300,600);
+	private ISolver solver = SMTUtils.initSolver(smt,"QF_LIA",7200,7200);
 	private int nbVar;
 
 	public void declareVariables(List<int[]>[] observations) {
