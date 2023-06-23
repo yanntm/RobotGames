@@ -28,8 +28,8 @@ public class Application implements IApplication {
 
 		int timeout = 3600;
 		long time = System.currentTimeMillis();
-		int nbRobot=4;
-		int nbPos=5;
+		int nbRobot=2;
+		int nbPos=3;
 		
 		for (int i=0; i < args.length ; i++) {
 			if (NB_ROBOT.equals(args[i])) {
@@ -40,7 +40,7 @@ public class Application implements IApplication {
 		}
 		boolean rigidFilter = false;
 		boolean enlarge = false;
-		boolean useSymmetries = true;
+		boolean useSymmetries = false;
 		
 		System.out.println("Running strategy search for K="+nbRobot +" on a ring of N="+nbPos +" positions.");
 		
